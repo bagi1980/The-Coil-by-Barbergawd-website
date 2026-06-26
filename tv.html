@@ -132,11 +132,14 @@
 <script>
 const $=s=>document.querySelector(s);
 
+let _lastMin='';
 function tick(){
   const d=new Date();
   $('#clock').textContent = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
   $('#date').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   checkWelcome(d);
+  const m=d.toTimeString().slice(0,5);
+  if(m!==_lastMin){ _lastMin=m; renderQueue(); }
 }
 setInterval(tick,1000);
 
