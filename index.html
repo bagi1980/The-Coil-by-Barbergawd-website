@@ -49,8 +49,12 @@
     <div class="section">Add session photo (for TV welcome + Instagram)</div>
     <div class="row"><input id="pName" placeholder="Client name (as on booking)"></div>
     <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Client phone"></div>
-    <input type="file" id="pFile" accept="image/*" style="margin-top:10px">
-    <button class="btn ghost" id="savePhoto">Save photo</button>
+    <label class="btn ghost" style="display:inline-block;margin-top:10px;cursor:pointer">
+      📷 Choose photo
+      <input type="file" id="pFile" accept="image/*" style="display:none">
+    </label>
+    <span id="pFileName" class="muted" style="margin-left:10px"></span>
+    <button class="btn ghost" id="savePhoto" style="margin-top:10px">Save photo</button>
     <div id="pResult" class="muted"></div>
   </div>
 </div>
@@ -116,18 +120,31 @@ function renderToday(){
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
     const ph=getPhoto(a.name,a.phone);
     const thumb = ph
-      ? `<img src="${ph}" title="Last cut" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--gold)">`
-      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#141414;border:1.5px solid var(--line);color:var(--mut);font-size:22px">＋</div>`;
+      ? `<img src="${ph}" title="Last cut" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--gold);cursor:pointer" onclick="prefillPhoto('${a.name.replace(/'/g,"\\'")}','${a.phone}')">`
+      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#141414;border:1.5px solid var(--line);color:var(--mut);font-size:22px;cursor:pointer" onclick="prefillPhoto('${a.name.replace(/'/g,"\\'")}','${a.phone}')">＋</div>`;
     return `<div class="item">${thumb}<div class="t">${a.time}</div>
       <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 has previous photo':''}</div></div>
       <span class="x" onclick="removeAppt('${a.id}')">Delete</span></div>`;
   }).join('') : '<div class="muted">No appointments today.</div>';
 }
+function prefillPhoto(name, phone){
+  $('#pName').value=name; $('#pPhone').value=phone;
+  $('#pFile').click();
+  document.querySelector('.tab[data-tab="admin"]').scrollIntoView({behavior:'smooth'});
+}
+$('#pFile').onchange=()=>{ $('#pFileName').textContent=$('#pFile').files[0]?.name||''; };
 $('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
-$('#savePhoto').onclick = ()=>{
-  const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Enter a name and choose a photo.'; return; }
-  const r=new FileReader(); r.onload=()=>{ savePhoto($('#pName').value, $('#pPhone').value, r.result);
-    $('#pResult').textContent='✓ Photo saved — it will appear on the TV on the next visit.'; }; r.readAsDataURL(f);
+$('#savePhoto').onclick = async ()=>{
+  const f=$('#pFile').files[0];
+  if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Enter a name and choose a photo.'; return; }
+  $('#pResult').textContent='Saving…';
+  try {
+    const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
+    const resp = await fetch('/api/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('#pName').value,phone:$('#pPhone').value,dataUrl})});
+    if(!resp.ok) throw new Error(await resp.text());
+    $('#pResult').textContent='✓ Photo saved — will appear on TV on next visit.';
+    renderToday();
+  } catch(e){ $('#pResult').textContent='Error: '+e.message; }
 };
 
 onData(()=>{ if(sel.barber) refreshSlots(); if($('#admin').style.display!=='none') renderToday(); });

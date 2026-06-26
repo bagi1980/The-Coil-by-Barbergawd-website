@@ -45,12 +45,13 @@ function freeSlots(dateStr, barberId) {
   return out;
 }
 
-// live: SSE + inicijalno učitavanje
+// live: polling uvek, SSE bonus kad radi lokalno
 (function initLive() {
   _refresh();
+  setInterval(_refresh, 5000);
   try {
     const es = new EventSource("/api/stream");
     es.onmessage = () => _refresh();
-    es.onerror = () => {};   // auto-reconnect
-  } catch (e) { setInterval(_refresh, 4000); }  // fallback polling
+    es.onerror = () => es.close();
+  } catch (e) {}
 })();
