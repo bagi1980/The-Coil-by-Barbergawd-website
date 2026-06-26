@@ -134,12 +134,31 @@ function prefillPhoto(name, phone){
 }
 $('#pFile').onchange=()=>{ $('#pFileName').textContent=$('#pFile').files[0]?.name||''; };
 $('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
+function resizeImage(file, maxPx=600, quality=0.8) {
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onerror=rej;
+    reader.onload=e=>{
+      const img=new Image();
+      img.onerror=rej;
+      img.onload=()=>{
+        const scale=Math.min(1, maxPx/Math.max(img.width,img.height));
+        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg', quality));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 $('#savePhoto').onclick = async ()=>{
   const f=$('#pFile').files[0];
   if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Enter a name and choose a photo.'; return; }
   $('#pResult').textContent='Saving…';
   try {
-    const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
+    const dataUrl = await resizeImage(f);
     const resp = await fetch('/api/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('#pName').value,phone:$('#pPhone').value,dataUrl})});
     if(!resp.ok) throw new Error(await resp.text());
     $('#pResult').textContent='✓ Photo saved — will appear on TV on next visit.';

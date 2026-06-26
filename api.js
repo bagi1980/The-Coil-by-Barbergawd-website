@@ -1,6 +1,7 @@
 // Salon App — API klijent (live preko SSE). Drži keš stanja; stranice se re-renderuju na promenu.
 const _state = { appointments: [], photos: {} };
 const _subs = [];
+let _lastHash = '';
 
 function loadAppts() { return _state.appointments; }
 function getPhoto(name, phone) { return _state.photos[clientKey(name, phone)] || null; }
@@ -11,6 +12,9 @@ async function _refresh() {
   try {
     const r = await fetch("/api/state");
     const s = await r.json();
+    const hash = s.appointments.length + '|' + Object.keys(s.photos).length + '|' + (s.appointments[0]?.id||'');
+    if (hash === _lastHash) return;
+    _lastHash = hash;
     _state.appointments = s.appointments || [];
     _state.photos = s.photos || {};
     _emit();
