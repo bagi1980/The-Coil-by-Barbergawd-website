@@ -8,10 +8,12 @@
 <style>
   :root{ --bg:#0A0A0A; --card:#161616; --line:#2A2A2A; --gold:#E6E6E6; --gold2:#FFFFFF; --white:#F4F4F4; --mut:#9C9C9C; }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%;font-family:'Playfair Display',Georgia,serif;color:var(--white);overflow:hidden;
+  html,body{min-height:100%;font-family:'Playfair Display',Georgia,serif;color:var(--white);
     background:radial-gradient(120% 80% at 50% 0%,#141414 0%,var(--bg) 60%)}
-  .screen{height:100vh;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;padding:54px 60px}
+  body{overflow-y:auto}
 
+  /* ── TV layout (landscape ≥900px) ── */
+  .screen{min-height:100vh;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;padding:54px 60px}
   .left{display:flex;flex-direction:column}
   .brand .name{font-size:54px;font-weight:700;letter-spacing:10px}
   .brand .name b{color:var(--gold)}
@@ -27,9 +29,8 @@
   .q .qn{font-size:30px;font-weight:700}
   .q .qm{font-size:18px;color:var(--mut)}
   .empty{color:var(--mut);font-size:22px;padding:20px}
-
   .right{display:flex;flex-direction:column;gap:24px}
-  .promo{flex:1;border-radius:24px;border:1.5px solid var(--line);background:var(--card);overflow:hidden;position:relative}
+  .promo{flex:1;min-height:340px;border-radius:24px;border:1.5px solid var(--line);background:var(--card);overflow:hidden;position:relative}
   .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s}
   .np-bg.on{opacity:1}
   .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,15,15,.15) 0%,rgba(15,15,15,0) 35%,rgba(15,15,15,.88) 100%)}
@@ -56,6 +57,33 @@
   .welcome .cap{margin-top:24px;font-size:26px;color:var(--mut);font-weight:600}
   .demo{position:fixed;bottom:16px;right:16px;z-index:60;background:#1B1B1B;border:1px solid #3a3a3a;color:var(--mut);
     font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;opacity:.5}
+
+  /* ── Mobile layout (≤899px) ── */
+  @media(max-width:899px){
+    .screen{grid-template-columns:1fr;gap:0;padding:28px 18px;min-height:unset}
+    .left{flex-direction:column}
+    .brand .name{font-size:32px;letter-spacing:6px}
+    .brand .sub{font-size:13px;letter-spacing:3px;margin-top:5px}
+    .clock{margin-top:16px}
+    .clock .t{font-size:72px}
+    .clock .d{font-size:16px;margin-top:4px}
+    .next-title{margin-top:24px;font-size:14px;letter-spacing:2px;margin-bottom:10px}
+    .q{padding:12px 14px;gap:12px;border-radius:12px}
+    .q .qt{font-size:24px;min-width:72px}
+    .q .qn{font-size:18px}
+    .q .qm{font-size:13px}
+    .queue{gap:8px}
+    .right{margin-top:24px;gap:14px}
+    .promo{min-height:260px;border-radius:16px}
+    .np-name{font-size:30px}
+    .np-meta{font-size:16px}
+    .np-label{font-size:12px;padding:5px 10px;top:14px;left:14px}
+    .music{height:180px;border-radius:16px}
+    .welcome .nm{font-size:58px}
+    .welcome .pic{width:240px;height:240px}
+    .welcome .hi{font-size:22px;letter-spacing:5px}
+    .welcome .cap{font-size:18px}
+  }
 </style>
 </head>
 <body>
