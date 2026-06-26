@@ -53,6 +53,8 @@ async function handler(req, res) {
   if (p === "/api/state" && req.method === "GET") return json(res, 200, await load());
 
   if (p === "/api/stream") {
+    // SSE ne radi na Vercel serverless — klijent koristi polling
+    if (process.env.VERCEL) { res.writeHead(204); return res.end(); }
     res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": "*" });
     res.write("retry: 3000\n\n");
     clients.push(res);
