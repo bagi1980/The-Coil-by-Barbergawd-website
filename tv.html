@@ -132,7 +132,7 @@
 <script>
 const $=s=>document.querySelector(s);
 
-let _lastMin='';
+let _lastMin='', _lastQueueKey='';
 function tick(){
   const d=new Date();
   $('#clock').textContent = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -204,6 +204,9 @@ function startCycle(clients){
 
 function renderQueue(){
   const {current, next, upcoming} = getSessionState();
+  const queueKey = [...current, next, ...upcoming].map(a=>a?.id+a?.greeted).join(',');
+  if(queueKey === _lastQueueKey) return;
+  _lastQueueKey = queueKey;
 
   // queue — samo nadolazeći (current je na kartici desno)
   $('#queue').innerHTML = upcoming.slice(0,5).length ? upcoming.slice(0,5).map(a=>{

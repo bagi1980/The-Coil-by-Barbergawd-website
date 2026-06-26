@@ -12,7 +12,7 @@ async function _refresh() {
   try {
     const r = await fetch("/api/state");
     const s = await r.json();
-    const hash = s.appointments.length + '|' + Object.keys(s.photos).length + '|' + (s.appointments[0]?.id||'');
+    const hash = JSON.stringify(s.appointments.map(a=>({id:a.id,greeted:a.greeted}))) + Object.keys(s.photos).sort().join(',');
     if (hash === _lastHash) return;
     _lastHash = hash;
     _state.appointments = s.appointments || [];
