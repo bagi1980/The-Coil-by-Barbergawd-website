@@ -99,7 +99,7 @@
       <div class="np-bg" id="npBg"></div>
       <div class="np-grad"></div>
       <div class="np-empty" id="npEmpty">💈</div>
-      <div class="np-label">Up next</div>
+      <div class="np-label" id="npLabel">Up next</div>
       <div class="np-body"><div class="np-name" id="npName">—</div><div class="np-meta" id="npMeta"></div></div>
     </div>
     <div class="music">
@@ -134,35 +134,80 @@ setInterval(tick,1000);
 
 $('#play').onclick = ()=>{ $('#yt').src = SALON.youtube + (SALON.youtube.includes('?')?'&':'?') + 'autoplay=1'; $('#play').style.display='none'; };
 
+function toMins(timeStr){ const [h,m]=timeStr.split(':').map(Number); return h*60+m; }
+
+function getSessionState(){
+  const nowMins = new Date().getHours()*60 + new Date().getMinutes();
+  const today = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  const current=[], upcoming=[];
+  for(const a of today){
+    const start=toMins(a.time);
+    const dur=(serviceById(a.serviceId)?.min)||30;
+    if(start<=nowMins && nowMins<start+dur) current.push(a);
+    else if(start>nowMins) upcoming.push(a);
+  }
+  return { current, next: upcoming[0]||null, upcoming };
+}
+
+function setCard(a, label){
+  const s=serviceById(a?.serviceId)?.name||'', b=barberById(a?.barberId)?.name||'';
+  $('#npLabel').textContent = label;
+  $('#npName').textContent = a ? a.name : '—';
+  $('#npMeta').textContent = a ? `${a.time} · ${s} · ${b}` : 'No appointments';
+  const photo = a ? getPhoto(a.name, a.phone) : null;
+  if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
+  else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
+}
+
+// cycling through current clients when multiple barbers overlap
+let _cycleIdx=0, _cycleClients=[], _cycleTimer=null;
+function startCycle(clients){
+  clearInterval(_cycleTimer);
+  _cycleClients=clients; _cycleIdx=0;
+  showCycleCard();
+  if(clients.length>1) _cycleTimer=setInterval(()=>{
+    // fade out → swap → fade in
+    $('#npBg').style.transition='opacity .8s';
+    $('#npBg').style.opacity='0';
+    setTimeout(()=>{
+      _cycleIdx=(_cycleIdx+1)%_cycleClients.length;
+      showCycleCard();
+      $('#npBg').style.opacity='';
+      setTimeout(()=>{ $('#npBg').style.transition=''; }, 900);
+    }, 850);
+  }, 120000); // 2 min
+}
+function showCycleCard(){
+  const a=_cycleClients[_cycleIdx];
+  setCard(a, '✂ In chair'+((_cycleClients.length>1)?` (${_cycleIdx+1}/${_cycleClients.length})`:''));
+}
+
 function renderQueue(){
-  const now=new Date(), nowT=now.toTimeString().slice(0,5);
-  const all=loadAppts().filter(a=>a.date===todayStr() && a.time>=nowT.slice(0,2)+':00')
-    .sort((x,y)=>x.time.localeCompare(y.time));
-  const list=all.slice(0,5);
-  $('#queue').innerHTML = list.length ? list.map((a,i)=>{
+  const {current, next, upcoming} = getSessionState();
+
+  // queue shows: current (marked NOW) + upcoming
+  const queueList = [...current.map(a=>({...a,_now:true})), ...upcoming].slice(0,5);
+  $('#queue').innerHTML = queueList.length ? queueList.map(a=>{
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
-    return `<div class="q ${i===0?'now':''}"><div class="qt">${a.time}</div>
+    return `<div class="q ${a._now?'now':''}"><div class="qt">${a.time}</div>
       <div><div class="qn">${a.name}</div><div class="qm">${s} · ${b}</div></div></div>`;
   }).join('') : '<div class="empty">No more appointments today.</div>';
 
-  const next=all[0];
-  if(next){
-    const s=serviceById(next.serviceId)?.name||'', b=barberById(next.barberId)?.name||'';
-    const photo=getPhoto(next.name,next.phone);
-    $('#npName').textContent=next.name;
-    $('#npMeta').textContent=`${next.time} · ${s} · ${b}`;
-    if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
-    else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
+  // main card
+  if(current.length>0){
+    // only restart cycle if set of current clients changed
+    const ids=current.map(a=>a.id).join(',');
+    if(ids!==_cycleClients.map(a=>a.id).join(',')) startCycle(current);
   } else {
-    $('#npName').textContent='—'; $('#npMeta').textContent='No appointments';
-    $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex';
+    clearInterval(_cycleTimer); _cycleClients=[];
+    setCard(next, 'Up next');
   }
 }
 
 let welcomeTimer=null;
 function showWelcome(a){
   const first=(a.name||'').split(' ')[0]||a.name;
-  $('#wName').innerHTML = `<span>${first}</span>`;
+  $('#wName').innerHTML=`<span>${first}</span>`;
   const photo=getPhoto(a.name,a.phone);
   if(photo){ $('#wImg').src=photo; $('#wPic').style.display='block'; $('#wCap').textContent='Good to see you again 💈'; }
   else { $('#wPic').style.display='none'; $('#wCap').textContent='Welcome to The Coil 💈'; }
@@ -183,7 +228,7 @@ onData(renderQueue);
 
 $('#demo').onclick=()=>{
   const list=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
-  showWelcome(list[0] || {name:'Test Client', phone:''});
+  showWelcome(list[0]||{name:'Test Client',phone:''});
 };
 
 tick(); renderQueue();
