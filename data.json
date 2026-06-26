@@ -1,0 +1,53 @@
+{
+  "appointments": [
+    {
+      "id": "d1",
+      "date": "2026-06-26",
+      "time": "11:04",
+      "barberId": "b1",
+      "serviceId": "s4",
+      "name": "James Carter",
+      "phone": "3125550141",
+      "greeted": true,
+      "createdAt": 1782464082199
+    },
+    {
+      "id": "d2",
+      "date": "2026-06-26",
+      "time": "12:04",
+      "barberId": "b1",
+      "serviceId": "s1",
+      "name": "Andre Wilson",
+      "phone": "3125550149",
+      "greeted": false,
+      "createdAt": 1782464082199
+    },
+    {
+      "id": "d3",
+      "date": "2026-06-26",
+      "time": "13:04",
+      "barberId": "b1",
+      "serviceId": "s2",
+      "name": "Devin Brooks",
+      "phone": "3125550137",
+      "greeted": false,
+      "createdAt": 1782464082199
+    },
+    {
+      "date": "2026-06-26",
+      "time": "10:00",
+      "barberId": "b1",
+      "serviceId": "s3",
+      "name": "Blagoje Djordjević",
+      "phone": "+381 691991009",
+      "id": "a1782464176380300",
+      "createdAt": 1782464176380,
+      "greeted": false
+    }
+  ],
+  "photos": {
+    "james carter|3125550141": "img/demo-client.png",
+    "andre wilson|3125550149": "img/demo-client2.png",
+    "devin brooks|3125550137": "img/demo-client3.png"
+  }
+}

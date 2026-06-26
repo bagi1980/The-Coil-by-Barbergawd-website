@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Coil — TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#0A0A0A; --card:#161616; --line:#2A2A2A; --gold:#E6E6E6; --gold2:#FFFFFF; --white:#F4F4F4; --mut:#9C9C9C; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;font-family:'Playfair Display',Georgia,serif;color:var(--white);overflow:hidden;
+    background:radial-gradient(120% 80% at 50% 0%,#141414 0%,var(--bg) 60%)}
+  .screen{height:100vh;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;padding:54px 60px}
+
+  .left{display:flex;flex-direction:column}
+  .brand .name{font-size:54px;font-weight:700;letter-spacing:10px}
+  .brand .name b{color:var(--gold)}
+  .brand .sub{font-size:18px;font-weight:600;letter-spacing:4px;color:var(--mut);text-transform:uppercase;margin-top:8px}
+  .clock{margin-top:30px}
+  .clock .t{font-size:128px;font-weight:700;line-height:.9;letter-spacing:-2px}
+  .clock .d{font-size:26px;font-weight:600;color:var(--mut);margin-top:6px;text-transform:capitalize}
+  .next-title{margin-top:auto;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px}
+  .queue{display:flex;flex-direction:column;gap:12px}
+  .q{display:flex;align-items:center;gap:18px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px 22px}
+  .q.now{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .q .qt{font-size:40px;font-weight:700;color:var(--gold2);min-width:120px}
+  .q .qn{font-size:30px;font-weight:700}
+  .q .qm{font-size:18px;color:var(--mut)}
+  .empty{color:var(--mut);font-size:22px;padding:20px}
+
+  .right{display:flex;flex-direction:column;gap:24px}
+  .promo{flex:1;border-radius:24px;border:1.5px solid var(--line);background:var(--card);overflow:hidden;position:relative}
+  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s}
+  .np-bg.on{opacity:1}
+  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,15,15,.15) 0%,rgba(15,15,15,0) 35%,rgba(15,15,15,.88) 100%)}
+  .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:150px;opacity:.8}
+  .np-label{position:absolute;top:22px;left:24px;z-index:2;background:var(--gold);color:#141210;font-weight:700;font-size:16px;letter-spacing:2px;padding:8px 16px;border-radius:10px}
+  .np-body{position:absolute;left:30px;right:30px;bottom:28px;z-index:2}
+  .np-name{font-size:50px;font-weight:700;letter-spacing:-1px;text-shadow:0 2px 16px rgba(0,0,0,.7)}
+  .np-meta{font-size:24px;font-weight:600;color:#e8e2d4;margin-top:4px;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+  .music{height:200px;border-radius:24px;overflow:hidden;border:1.5px solid var(--line);position:relative}
+  .music iframe{width:100%;height:100%;border:0}
+  .music .ml{position:absolute;top:14px;left:16px;z-index:3;background:rgba(15,15,15,.7);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--gold2);padding:6px 12px;border-radius:8px}
+  .music .play{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;
+    background:rgba(15,15,15,.8);color:var(--gold2);font-size:26px;font-weight:700;cursor:pointer;letter-spacing:.5px}
+
+  .welcome{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 90% at 50% 30%,#1e1e1e 0%,#080808 70%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    opacity:0;pointer-events:none;transition:opacity .5s}
+  .welcome.on{opacity:1;pointer-events:auto}
+  .welcome .hi{font-size:34px;font-weight:700;letter-spacing:8px;color:var(--gold);text-transform:uppercase}
+  .welcome .nm{font-size:120px;font-weight:700;line-height:1;margin-top:18px;letter-spacing:-2px}
+  .welcome .nm span{color:var(--gold2)}
+  .welcome .pic{margin-top:40px;width:420px;height:420px;border-radius:28px;overflow:hidden;border:4px solid var(--gold);box-shadow:0 0 80px rgba(200,168,118,.3)}
+  .welcome .pic img{width:100%;height:100%;object-fit:cover}
+  .welcome .cap{margin-top:24px;font-size:26px;color:var(--mut);font-weight:600}
+  .demo{position:fixed;bottom:16px;right:16px;z-index:60;background:#1B1B1B;border:1px solid #3a3a3a;color:var(--mut);
+    font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;opacity:.5}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="left">
+    <div class="brand"><div class="name">THE <b>COIL</b></div><div class="sub">Barbershop · Chicago</div></div>
+    <div class="clock"><div class="t" id="clock">--:--</div><div class="d" id="date"></div></div>
+    <div class="next-title">Queue</div>
+    <div class="queue" id="queue"></div>
+  </div>
+  <div class="right">
+    <div class="promo" id="nextCard">
+      <div class="np-bg" id="npBg"></div>
+      <div class="np-grad"></div>
+      <div class="np-empty" id="npEmpty">💈</div>
+      <div class="np-label">Up next</div>
+      <div class="np-body"><div class="np-name" id="npName">—</div><div class="np-meta" id="npMeta"></div></div>
+    </div>
+    <div class="music">
+      <div class="ml">♪ MUSIC</div>
+      <iframe id="yt" allow="autoplay; encrypted-media" src="about:blank"></iframe>
+      <div class="play" id="play">▶ Play music</div>
+    </div>
+  </div>
+</div>
+
+<div class="welcome" id="welcome">
+  <div class="hi">Welcome</div>
+  <div class="nm" id="wName"></div>
+  <div class="pic" id="wPic" style="display:none"><img id="wImg"></div>
+  <div class="cap" id="wCap"></div>
+</div>
+
+<div class="demo" id="demo">▶ Demo welcome</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+
+function tick(){
+  const d=new Date();
+  $('#clock').textContent = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  $('#date').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  checkWelcome(d);
+}
+setInterval(tick,1000);
+
+$('#play').onclick = ()=>{ $('#yt').src = SALON.youtube + (SALON.youtube.includes('?')?'&':'?') + 'autoplay=1'; $('#play').style.display='none'; };
+
+function renderQueue(){
+  const now=new Date(), nowT=now.toTimeString().slice(0,5);
+  const all=loadAppts().filter(a=>a.date===todayStr() && a.time>=nowT.slice(0,2)+':00')
+    .sort((x,y)=>x.time.localeCompare(y.time));
+  const list=all.slice(0,5);
+  $('#queue').innerHTML = list.length ? list.map((a,i)=>{
+    const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
+    return `<div class="q ${i===0?'now':''}"><div class="qt">${a.time}</div>
+      <div><div class="qn">${a.name}</div><div class="qm">${s} · ${b}</div></div></div>`;
+  }).join('') : '<div class="empty">No more appointments today.</div>';
+
+  const next=all[0];
+  if(next){
+    const s=serviceById(next.serviceId)?.name||'', b=barberById(next.barberId)?.name||'';
+    const photo=getPhoto(next.name,next.phone);
+    $('#npName').textContent=next.name;
+    $('#npMeta').textContent=`${next.time} · ${s} · ${b}`;
+    if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
+    else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
+  } else {
+    $('#npName').textContent='—'; $('#npMeta').textContent='No appointments';
+    $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex';
+  }
+}
+
+let welcomeTimer=null;
+function showWelcome(a){
+  const first=(a.name||'').split(' ')[0]||a.name;
+  $('#wName').innerHTML = `<span>${first}</span>`;
+  const photo=getPhoto(a.name,a.phone);
+  if(photo){ $('#wImg').src=photo; $('#wPic').style.display='block'; $('#wCap').textContent='Good to see you again 💈'; }
+  else { $('#wPic').style.display='none'; $('#wCap').textContent='Welcome to The Coil 💈'; }
+  $('#welcome').classList.add('on');
+  clearTimeout(welcomeTimer);
+  welcomeTimer=setTimeout(()=>$('#welcome').classList.remove('on'), 12000);
+}
+function checkWelcome(d){
+  const t=d.toTimeString().slice(0,5);
+  loadAppts().filter(a=>a.date===todayStr() && a.time===t && !a.greeted).forEach(a=>{
+    a.greeted=true;
+    fetch('/api/appointments/greet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})});
+    showWelcome(a);
+  });
+}
+
+onData(renderQueue);
+
+$('#demo').onclick=()=>{
+  const list=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  showWelcome(list[0] || {name:'Test Client', phone:''});
+};
+
+tick(); renderQueue();
+</script>
+</body>
+</html>

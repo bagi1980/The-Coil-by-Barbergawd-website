@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Coil — Booking</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="name">THE <b>COIL</b></div>
+    <div class="sub">Barbershop · Chicago</div>
+    <div class="rule"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab sel" data-tab="book">Book appointment</div>
+    <div class="tab" data-tab="admin">Barber (admin)</div>
+    <div class="tab" data-tab="tv" onclick="location.href='tv.html'">📺 TV screen</div>
+  </div>
+
+  <!-- BOOKING -->
+  <div id="book">
+    <div class="section">1 · Service</div>
+    <div class="chips" id="services"></div>
+    <div class="section">2 · Barber</div>
+    <div class="chips" id="barbers"></div>
+    <div class="section">3 · Time</div>
+    <div class="row" style="margin-bottom:14px">
+      <select id="day"></select>
+    </div>
+    <div class="slots" id="slots"></div>
+    <div class="section">4 · Your details</div>
+    <div class="row">
+      <input id="name" placeholder="Full name">
+      <input id="phone" placeholder="Phone">
+    </div>
+    <button class="btn" id="submit" disabled>Book appointment</button>
+    <div id="result"></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="admin" style="display:none">
+    <button class="btn ghost" id="loadDemo">↻ Load demo (reset for presentation)</button>
+    <div class="section">Today's appointments</div>
+    <div class="list" id="todayList"></div>
+    <div class="section">Add session photo (for TV welcome + Instagram)</div>
+    <div class="row"><input id="pName" placeholder="Client name (as on booking)"></div>
+    <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Client phone"></div>
+    <input type="file" id="pFile" accept="image/*" style="margin-top:10px">
+    <button class="btn ghost" id="savePhoto">Save photo</button>
+    <div id="pResult" class="muted"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let sel = { service:null, barber:null, day:todayStr(), time:null };
+
+document.querySelectorAll('.tab[data-tab]').forEach(t=>{
+  if(t.dataset.tab==='tv') return;
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
+    t.classList.add('sel');
+    $('#book').style.display = t.dataset.tab==='book'?'block':'none';
+    $('#admin').style.display = t.dataset.tab==='admin'?'block':'none';
+    if(t.dataset.tab==='admin') renderToday();
+  };
+});
+
+$('#services').innerHTML = SERVICES.map(s=>
+  `<div class="chip" data-s="${s.id}">${s.name}<small>$${s.price} · ${s.min} min</small></div>`).join('');
+$('#services').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
+  document.querySelectorAll('#services .chip').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel'); sel.service=c.dataset.s; refreshSlots(); check(); };
+
+$('#barbers').innerHTML = BARBERS.map(b=>`<div class="chip" data-b="${b.id}">${b.name}</div>`).join('');
+$('#barbers').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
+  document.querySelectorAll('#barbers .chip').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel'); sel.barber=c.dataset.b; refreshSlots(); check(); };
+
+const d0=new Date(), d1=new Date(Date.now()+864e5);
+$('#day').innerHTML = `<option value="${todayStr(d0)}">Today (${d0.toLocaleDateString('en-US')})</option>
+  <option value="${todayStr(d1)}">Tomorrow (${d1.toLocaleDateString('en-US')})</option>`;
+$('#day').onchange = e=>{ sel.day=e.target.value; sel.time=null; refreshSlots(); check(); };
+
+function refreshSlots(){
+  if(!sel.barber){ $('#slots').innerHTML='<div class="muted">Select a barber</div>'; return; }
+  const free = freeSlots(sel.day, sel.barber);
+  $('#slots').innerHTML = free.map(t=>`<div class="slot" data-t="${t}">${t}</div>`).join('');
+}
+$('#slots').onclick = e=>{ const s=e.target.closest('.slot'); if(!s)return;
+  document.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));
+  s.classList.add('sel'); sel.time=s.dataset.t; check(); };
+
+function check(){ $('#submit').disabled = !(sel.service&&sel.barber&&sel.time&&$('#name').value.trim()&&$('#phone').value.trim()); }
+$('#name').oninput=check; $('#phone').oninput=check;
+
+$('#submit').onclick = async ()=>{
+  $('#submit').disabled=true;
+  const a = await addAppt({ date:sel.day, time:sel.time, barberId:sel.barber, serviceId:sel.service,
+    name:$('#name').value.trim(), phone:$('#phone').value.trim() });
+  const b=barberById(sel.barber).name, s=serviceById(sel.service);
+  $('#result').innerHTML = `<div class="ok"><b>Appointment booked!</b><br>${a.name}, ${s.name} with ${b}<br>
+    ${sel.day===todayStr()?'Today':'Tomorrow'} at ${a.time}. See you! 💈</div>`;
+  sel.time=null; refreshSlots();
+};
+
+function renderToday(){
+  const list = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  $('#todayList').innerHTML = list.length ? list.map(a=>{
+    const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
+    const ph=getPhoto(a.name,a.phone);
+    const thumb = ph
+      ? `<img src="${ph}" title="Last cut" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--gold)">`
+      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#141414;border:1.5px solid var(--line);color:var(--mut);font-size:22px">＋</div>`;
+    return `<div class="item">${thumb}<div class="t">${a.time}</div>
+      <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 has previous photo':''}</div></div>
+      <span class="x" onclick="removeAppt('${a.id}')">Delete</span></div>`;
+  }).join('') : '<div class="muted">No appointments today.</div>';
+}
+$('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
+$('#savePhoto').onclick = ()=>{
+  const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Enter a name and choose a photo.'; return; }
+  const r=new FileReader(); r.onload=()=>{ savePhoto($('#pName').value, $('#pPhone').value, r.result);
+    $('#pResult').textContent='✓ Photo saved — it will appear on the TV on the next visit.'; }; r.readAsDataURL(f);
+};
+
+onData(()=>{ if(sel.barber) refreshSlots(); if($('#admin').style.display!=='none') renderToday(); });
+refreshSlots();
+</script>
+</body>
+</html>
