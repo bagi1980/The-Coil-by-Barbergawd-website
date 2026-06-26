@@ -3,7 +3,9 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = __dirname;
-const DB = path.join(ROOT, "data.json");
+// /tmp je jedino writable mesto na Vercel; bundlovani data.json je readonly seed
+const DB = process.env.VERCEL ? "/tmp/data.json" : path.join(ROOT, "data.json");
+const SEED = path.join(ROOT, "data.json");
 
 // --- Storage: Redis kad je dostupan, inače fajl ---
 let redis = null;
@@ -17,7 +19,10 @@ async function load() {
     const d = await redis.get("salon:data");
     return d || { appointments: [], photos: {} };
   }
-  try { return JSON.parse(fs.readFileSync(DB, "utf8")); } catch { return { appointments: [], photos: {} }; }
+  try { return JSON.parse(fs.readFileSync(DB, "utf8")); } catch {
+    // /tmp prazan pri cold startu — učitaj seed iz bundlovanog data.json
+    try { return JSON.parse(fs.readFileSync(SEED, "utf8")); } catch { return { appointments: [], photos: {} }; }
+  }
 }
 
 async function save(d) {
