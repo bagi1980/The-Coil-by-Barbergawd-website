@@ -81,17 +81,37 @@
     background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
   .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s;transform:scale(1.04)}
   .np-bg.on{opacity:1}
-  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.12) 0%,rgba(10,10,12,0) 32%,rgba(10,10,12,.55) 70%,rgba(8,8,10,.92) 100%)}
+  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.08) 0%,rgba(10,10,12,0) 20%,rgba(10,10,12,.5) 55%,rgba(8,8,10,.97) 100%)}
   .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.16)}
   .np-empty svg{width:160px;height:160px}
-  .np-label{position:absolute;top:22px;left:24px;z-index:2;display:flex;align-items:center;gap:9px;
+  .np-label{position:absolute;top:22px;left:24px;z-index:4;display:flex;align-items:center;gap:9px;
     background:var(--red);color:var(--cream);font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:3px;
     padding:9px 16px;border-radius:11px;box-shadow:0 8px 24px rgba(200,16,46,.35)}
   .np-label .dot{width:8px;height:8px;background:var(--cream);box-shadow:none}
-  .np-body{position:absolute;left:30px;right:30px;bottom:30px;z-index:2}
-  .np-kicker{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--cream);opacity:.85;margin-bottom:4px}
-  .np-name{font-family:var(--display);font-weight:600;font-size:54px;line-height:1;letter-spacing:.5px;text-shadow:0 3px 20px rgba(0,0,0,.8)}
-  .np-meta{font-size:23px;font-weight:600;color:#e8e2d4;margin-top:8px;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  .np-body{position:absolute;left:30px;right:30px;bottom:30px;z-index:3}
+  .np-kicker{font-family:var(--serif);font-style:italic;font-size:20px;color:#fff;opacity:.9;margin-bottom:6px;
+    text-shadow:0 2px 12px rgba(0,0,0,.95)}
+  .np-name{font-family:var(--display);font-weight:700;font-size:56px;line-height:1;letter-spacing:.5px;color:#fff;
+    text-shadow:0 2px 8px rgba(0,0,0,1),0 8px 32px rgba(0,0,0,.9)}
+  .np-meta{font-size:23px;font-weight:700;color:rgba(255,255,255,.95);margin-top:8px;
+    text-shadow:0 2px 14px rgba(0,0,0,.98)}
+  /* TV schedule slide */
+  .np-sched{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:80px 30px 30px;gap:0;z-index:3;background:rgba(10,10,14,.55)}
+  .np-sched-title{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:4px;
+    color:var(--mut);text-transform:uppercase;margin-bottom:18px}
+  .np-sched-row{display:flex;align-items:center;gap:16px;padding:13px 0;
+    border-bottom:1px solid rgba(255,255,255,.07)}
+  .np-sched-row:last-child{border-bottom:none}
+  .np-sched-row .sr-t{font-family:var(--display);font-size:28px;font-weight:600;
+    color:var(--red2);min-width:84px;font-variant-numeric:tabular-nums}
+  .np-sched-row.active .sr-t{color:var(--white)}
+  .np-sched-row .sr-i{flex:1}
+  .np-sched-row .sr-n{font-size:22px;font-weight:700;color:var(--white)}
+  .np-sched-row .sr-m{font-size:14px;color:var(--mut);font-weight:600;margin-top:2px}
+  .np-sched-row.active .sr-m{color:var(--red2)}
+  .np-sched-row .sr-b{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:2px;
+    color:var(--red2);border:1px solid rgba(230,57,80,.4);border-radius:999px;padding:4px 10px}
   /* ── TV nav ────────────────────────────── */
   .tvnav{position:fixed;top:20px;right:20px;z-index:60;display:flex;gap:10px}
   .tvnav a{font-family:var(--body);background:var(--glass);border:1px solid var(--line2);color:var(--mut);
@@ -253,8 +273,9 @@
           <path d="M9 9v11M15 9v11M5 12.5h14M5 16h14"/>
         </svg>
       </div>
+      <div class="np-sched" id="npSched"></div>
       <div class="np-label" id="npLabel"><span class="dot"></span>NA REDU</div>
-      <div class="np-body">
+      <div class="np-body" id="npBody">
         <div class="np-kicker" id="npKicker">Sledeći u stolici</div>
         <div class="np-name" id="npName">—</div>
         <div class="np-meta" id="npMeta"></div>
@@ -372,16 +393,36 @@ function getSessionState(){
 let _slides=[], _slideIdx=0, _cycleTimer=null, _fading=false;
 
 function applySlide(slide){
-  const s=slide.client?serviceById(slide.client.serviceId)?.name||'':'';
-  const b=slide.client?barberById(slide.client.barberId)?.name||'':'';
+  const sched=$('#npSched'), body=$('#npBody'), empty=$('#npEmpty'), bg=$('#npBg');
+  sched.style.display='none'; body.style.display='block';
+  $('#npCounter').textContent=_slides.length>1?`${_slideIdx+1} / ${_slides.length}`:'';
+
   if(slide.type==='empty'){
     $('#npLabel').innerHTML='<span class="dot"></span>ČEKA SE';
     $('#npKicker').textContent=''; $('#npName').textContent='—'; $('#npMeta').textContent='Nema termina za sada';
-    $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex';
-    $('#npCounter').textContent='';
+    bg.classList.remove('on'); empty.style.display='flex';
     return;
   }
-  const a=slide.client, photo=getPhoto(a.name,a.phone);
+
+  if(slide.type==='tv'){
+    $('#npLabel').innerHTML='<span class="dot"></span>DANAS';
+    bg.classList.remove('on'); empty.style.display='none'; body.style.display='none';
+    sched.style.display='flex';
+    sched.innerHTML='<div class="np-sched-title">Raspored za danas</div>'
+      +slide.list.map(a=>{
+        const s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
+        const inChair=slide.currentIds.includes(a.id);
+        return `<div class="np-sched-row${inChair?' active':''}">
+          <div class="sr-t">${a.time}</div>
+          <div class="sr-i"><div class="sr-n">${a.name}</div><div class="sr-m">${s} · ${b}</div></div>
+          ${inChair?'<div class="sr-b">U STOLICI</div>':''}
+        </div>`;
+      }).join('');
+    return;
+  }
+
+  const a=slide.client, s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
+  const photo=getPhoto(a.name,a.phone);
   if(slide.type==='next'){
     $('#npLabel').innerHTML='<span class="dot"></span>NA REDU';
     $('#npKicker').textContent='Sledeći u stolici';
@@ -391,16 +432,17 @@ function applySlide(slide){
   }
   $('#npName').textContent=a.name;
   $('#npMeta').textContent=`${a.time} · ${s}`;
-  if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
-  else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
-  $('#npCounter').textContent=_slides.length>1?`${_slideIdx+1} / ${_slides.length}`:'';
+  if(photo){ bg.style.backgroundImage=`url('${photo}')`; bg.classList.add('on'); empty.style.display='none'; }
+  else { bg.classList.remove('on'); empty.style.display='flex'; }
 }
 
-function buildSlides(current,next){
-  const s=[];
-  if(next) s.push({type:'next',client:next});
-  for(const c of current) s.push({type:'now',client:c});
-  return s.length?s:[{type:'empty'}];
+function buildSlides(current,next,upcoming){
+  const slides=[];
+  const allToday=[...current,...upcoming];
+  if(allToday.length) slides.push({type:'tv',list:allToday.slice(0,4),currentIds:current.map(c=>c.id)});
+  for(const c of current) slides.push({type:'now',client:c});
+  if(next) slides.push({type:'next',client:next});
+  return slides.length?slides:[{type:'empty'}];
 }
 
 function cycleNext(){
@@ -443,10 +485,12 @@ function renderQueue(){
   }
 
   // Cycling panel — osvežava samo ako se lista promenila
-  const newSlides=buildSlides(current,next);
-  const photoHash=s=>s.client?(getPhoto(s.client.name,s.client.phone)?'1':'0'):'0';
-  const newKey=newSlides.map(s=>s.type+':'+(s.client?.id||'')+':'+photoHash(s)).join(',');
-  const oldKey=_slides.map(s=>s.type+':'+(s.client?.id||'')+':'+photoHash(s)).join(',');
+  const newSlides=buildSlides(current,next,upcoming);
+  const slideKey=s=>s.type==='tv'
+    ?'tv:'+(s.list||[]).map(a=>a.id).join('-')+':'+(s.currentIds||[]).join('-')
+    :s.type+':'+(s.client?.id||'')+(s.client?':'+(getPhoto(s.client.name,s.client.phone)?'1':'0'):'');
+  const newKey=newSlides.map(slideKey).join(',');
+  const oldKey=_slides.map(slideKey).join(',');
   if(newKey!==oldKey){
     _slides=newSlides; _slideIdx=0;
     applySlide(_slides[0]);
