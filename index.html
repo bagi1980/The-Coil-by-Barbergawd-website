@@ -102,7 +102,10 @@
   <div id="admin" style="display:none">
     <button class="btn ghost" id="loadDemo">↻ Učitaj demo (reset za prezentaciju)</button>
     <div class="section" data-n="•">Današnji termini</div>
+    <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">Klikni <b style="color:var(--cream)">＋</b> (ili fotku) pored klijenta da dodaš/izmeniš fotku sa sesije.</div>
     <div class="list" id="todayList"></div>
+    <input type="file" id="rowFile" accept="image/*" style="display:none">
+    <div id="rowResult" class="muted" style="padding:6px 0"></div>
     <div class="section" data-n="•">Dodaj fotku sesije (za TV pozdrav + Instagram)</div>
     <div class="row"><input id="pName" placeholder="Ime klijenta (kao kod zakazivanja)"></div>
     <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Telefon klijenta"></div>
@@ -200,15 +203,34 @@ function renderToday(){
   $('#todayList').innerHTML = list.length ? list.map(a=>{
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
     const ph=getPhoto(a.name,a.phone);
-    const thumb = ph
-      ? `<img src="${ph}" title="Prošlo šišanje" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--red2)">`
-      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--mut);font-size:22px">＋</div>`;
+    const thumb = `<div class="thumb${ph?' has':''}" data-id="${a.id}" title="${ph?'Klikni da promeniš fotku':'Klikni da dodaš fotku'}">${
+      ph ? `<img src="${ph}" alt=""><span class="edit">✎</span>` : '＋'}</div>`;
     return `<div class="item">${thumb}<div class="t">${a.time}</div>
       <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 ima prošlu fotku':''}</div></div>
       <span class="x" onclick="removeAppt('${a.id}')">Obriši</span></div>`;
   }).join('') : '<div class="muted">Nema termina za danas.</div>';
 }
 $('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
+
+// klik na ＋ / fotku pored klijenta → upload fotke za tog klijenta
+let pendingClient=null;
+$('#todayList').addEventListener('click', e=>{
+  const t=e.target.closest('.thumb'); if(!t) return;
+  const a=loadAppts().find(x=>x.id===t.dataset.id); if(!a) return;
+  pendingClient={name:a.name, phone:a.phone};
+  $('#rowFile').value='';
+  $('#rowFile').click();
+});
+$('#rowFile').onchange = ()=>{
+  const f=$('#rowFile').files[0]; if(!f||!pendingClient) return;
+  const r=new FileReader();
+  r.onload=async ()=>{
+    await savePhoto(pendingClient.name, pendingClient.phone, r.result);
+    $('#rowResult').textContent=`✓ Fotka sačuvana za ${pendingClient.name} — pojaviće se na TV-u.`;
+    pendingClient=null; renderToday();
+  };
+  r.readAsDataURL(f);
+};
 $('#savePhoto').onclick = ()=>{
   const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Unesi ime i izaberi fotku.'; return; }
   const r=new FileReader(); r.onload=()=>{ savePhoto($('#pName').value, $('#pPhone').value, r.result);

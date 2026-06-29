@@ -89,6 +89,12 @@ input::placeholder{color:#6f6a5e}
 .list .item{display:flex;align-items:center;gap:14px;padding:15px;border-radius:14px;background:var(--card);border:1px solid var(--line);margin-bottom:10px;backdrop-filter:blur(12px)}
 .list .item .t{font-family:var(--display);font-size:24px;font-weight:600;color:var(--cream);min-width:74px}
 .list .item .who{font-weight:700}.list .item .meta{font-size:13px;color:var(--mut)}
+.thumb{width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--mut);font-size:22px;cursor:pointer;position:relative;overflow:hidden;flex-shrink:0;transition:.15s}
+.thumb:hover{border-color:var(--red2);color:var(--cream)}
+.thumb.has{border:2px solid var(--red2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .edit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,10,12,.55);color:var(--cream);font-size:18px;opacity:0;transition:.15s}
+.thumb.has:hover .edit{opacity:1}
 .list .item .x{margin-left:auto;color:var(--red2);cursor:pointer;font-weight:700;border:1px solid rgba(230,57,80,.4);border-radius:9px;padding:7px 11px;transition:.15s}
 .list .item .x:hover{background:rgba(230,57,80,.12)}
 .muted{color:var(--mut);font-size:14px;text-align:center;padding:20px}
