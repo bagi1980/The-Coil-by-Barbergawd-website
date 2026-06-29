@@ -1,29 +1,30 @@
-// The Coil — configuration (client + display).  *** PLACEHOLDER brand — confirm real assets ***
+// Barbershop App — konfiguracija (klijent + prikaz)
 const SALON = {
-  name: "THE COIL",
-  city: "Chicago",
-  address: "South Loop",
-  hours: { open: 10, close: 20 },
+  name: "BARBERSHOP",
+  tagline: "Classic Cuts · Hot Towel · Beard",
+  established: "EST. 2024",
+  hours: { open: 9, close: 21 },
   slotMin: 30,
-  // Salon music — replace with The Coil's own YouTube playlist/channel
+  // Muzika salona — zameni svojom YouTube plejlistom/kanalom. (na klik se pušta sa zvukom)
   youtube: "https://www.youtube.com/embed/videoseries?list=PLOzDu-MXXLliO9fBNZOQTBDddoA3FzZUo"
 };
 
-// Services — placeholder pricing (confirm exact from booking page)
 const SERVICES = [
-  { id: "s1", name: "Haircut", price: 45, min: 45 },
-  { id: "s2", name: "Haircut + Beard", price: 65, min: 60 },
-  { id: "s3", name: "Beard Trim", price: 30, min: 30 },
-  { id: "s4", name: "Skin Fade", price: 55, min: 45 },
-  { id: "s5", name: "Hair Unit Service", price: 250, min: 120 }
+  { id: "s1", name: "Šišanje", price: 800, min: 30 },
+  { id: "s2", name: "Šišanje + brada", price: 1100, min: 45 },
+  { id: "s3", name: "Brada", price: 500, min: 30 },
+  { id: "s4", name: "Fade / fazoniranje", price: 1000, min: 45 },
+  { id: "s5", name: "Klinac (do 12 god.)", price: 600, min: 30 }
 ];
 
-// Solo master barber (private suite, South Loop)
 const BARBERS = [
-  { id: "b1", name: "Tony" }
+  { id: "b1", name: "Marko" },
+  { id: "b2", name: "Stefan" },
+  { id: "b3", name: "Nikola" }
 ];
 
 function todayStr(d = new Date()) {
+  // lokalni datum (ne UTC) da se ne pomeri dan
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 function serviceById(id) { return SERVICES.find(s => s.id === id); }

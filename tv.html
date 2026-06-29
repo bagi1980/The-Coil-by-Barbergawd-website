@@ -1,235 +1,342 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Coil — TV</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Barbershop — TV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Bodoni+Moda:ital,opsz,wght@1,6..96,400;1,6..96,500&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#0A0A0A; --card:#161616; --line:#2A2A2A; --gold:#E6E6E6; --gold2:#FFFFFF; --white:#F4F4F4; --mut:#9C9C9C; }
+  :root{
+    --bg:#0A0A0C; --ink:#08080A;
+    --red:#C8102E; --red2:#E63950;
+    --blue:#16306B; --blue2:#4E78C8;
+    --cream:#F4EFE2; --white:#F7F5EF; --mut:#A7A39A;
+    --glass:rgba(18,18,22,.62); --glass2:rgba(24,24,30,.70);
+    --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.16);
+    --display:'Oswald',system-ui,sans-serif;
+    --body:'Manrope',system-ui,sans-serif;
+    --serif:'Bodoni Moda',Georgia,serif;
+  }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{min-height:100%;font-family:'Playfair Display',Georgia,serif;color:var(--white);
-    background:radial-gradient(120% 80% at 50% 0%,#141414 0%,var(--bg) 60%)}
-  body{overflow-y:auto}
+  html,body{height:100%;font-family:var(--body);color:var(--white);overflow:hidden;background:var(--bg)}
 
-  /* ── TV layout (landscape ≥900px) ── */
-  .screen{min-height:100vh;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;padding:54px 60px}
-  .left{display:flex;flex-direction:column}
-  .brand .name{font-size:54px;font-weight:700;letter-spacing:10px}
-  .brand .name b{color:var(--gold)}
-  .brand .sub{font-size:18px;font-weight:600;letter-spacing:4px;color:var(--mut);text-transform:uppercase;margin-top:8px}
-  .clock{margin-top:30px}
-  .clock .t{font-size:128px;font-weight:700;line-height:.9;letter-spacing:-2px}
-  .clock .d{font-size:26px;font-weight:600;color:var(--mut);margin-top:6px;text-transform:capitalize}
-  .next-title{margin-top:auto;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px}
-  .queue{display:flex;flex-direction:column;gap:12px}
-  .q{display:flex;align-items:center;gap:18px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px 22px}
-  .q.now{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
-  .q .qt{font-size:40px;font-weight:700;color:var(--gold2);min-width:120px}
-  .q .qn{font-size:30px;font-weight:700}
-  .q .qm{font-size:18px;color:var(--mut)}
-  .empty{color:var(--mut);font-size:22px;padding:20px}
-  .right{display:flex;flex-direction:column;gap:24px}
-  .promo{flex:1;min-height:340px;border-radius:24px;border:1.5px solid var(--line);background:var(--card);overflow:hidden;position:relative}
-  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s}
+  /* animated barber-pole background + readability scrim */
+  #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;background:var(--bg)}
+  .bg-fallback{background:
+    repeating-linear-gradient(125deg,rgba(200,16,46,.22) 0 70px,rgba(244,239,226,.05) 70px 140px,rgba(22,48,107,.24) 140px 210px,rgba(244,239,226,.05) 210px 280px),var(--bg)}
+  .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(130% 100% at 50% 0%,rgba(10,10,12,.30) 0%,rgba(10,10,12,.78) 70%,rgba(8,8,10,.92) 100%)}
+
+  .screen{position:relative;z-index:2;height:100vh;display:grid;grid-template-rows:auto 1fr auto;
+    grid-template-columns:1.32fr 1fr;grid-template-areas:"top top" "left right" "ticker ticker";
+    gap:30px 40px;padding:36px 52px 0}
+
+  /* ── top bar ───────────────────────────── */
+  .topbar{grid-area:top;display:flex;align-items:center;justify-content:space-between}
+  .mark{display:flex;align-items:center;gap:18px}
+  .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);overflow:hidden;
+    box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
+  .pole i{position:absolute;left:-50%;top:-60%;width:200%;height:220%;
+    background:repeating-linear-gradient(125deg,var(--red) 0 14px,var(--cream) 14px 28px,var(--blue) 28px 42px,var(--cream) 42px 56px);
+    animation:spin 5s linear infinite}
+  @keyframes spin{to{transform:translateY(28%)}}
+  .wordmark .name{font-family:var(--display);font-weight:700;font-size:42px;letter-spacing:9px;line-height:.95;color:var(--white)}
+  .wordmark .name b{color:var(--red2);font-weight:700}
+  .wordmark .est{font-family:var(--serif);font-style:italic;font-size:17px;color:var(--mut);letter-spacing:1px;margin-top:3px}
+  .status{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--line);
+    border-radius:999px;padding:11px 20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .dot{width:11px;height:11px;border-radius:50%;background:#3ad17a;box-shadow:0 0 0 4px rgba(58,209,122,.18);animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.45}}
+  .status .lbl{font-family:var(--display);font-weight:600;letter-spacing:3px;font-size:15px}
+  .status .hrs{color:var(--mut);font-size:14px;font-weight:600;letter-spacing:.5px}
+
+  /* ── left: clock + queue ───────────────── */
+  .left{grid-area:left;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .clock .t{font-family:var(--display);font-weight:600;font-size:clamp(108px,13vw,150px);line-height:.82;letter-spacing:-1px;
+    font-variant-numeric:tabular-nums;text-shadow:0 8px 40px rgba(0,0,0,.55)}
+  .clock .t span{color:var(--red2)}
+  .clock .d{font-family:var(--serif);font-style:italic;font-size:27px;color:var(--cream);opacity:.85;margin-top:10px;text-transform:capitalize}
+  .next-title{display:flex;align-items:center;gap:14px;margin:26px 0 14px;
+    font-family:var(--display);font-size:19px;font-weight:600;letter-spacing:5px;color:var(--mut);text-transform:uppercase}
+  .next-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+  .queue{display:flex;flex-direction:column;gap:11px;overflow:hidden}
+  .q{display:flex;align-items:center;gap:18px;background:var(--glass);border:1px solid var(--line);
+    border-radius:18px;padding:16px 22px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .q.now{border-color:rgba(230,57,80,.55);background:linear-gradient(100deg,rgba(200,16,46,.20),var(--glass2));
+    box-shadow:0 10px 36px rgba(200,16,46,.18)}
+  .q .qt{font-family:var(--display);font-size:42px;font-weight:600;color:var(--cream);min-width:120px;font-variant-numeric:tabular-nums}
+  .q.now .qt{color:var(--red2)}
+  .q .qn{font-size:28px;font-weight:700;letter-spacing:.2px}
+  .q .qm{font-size:17px;color:var(--mut);font-weight:600;margin-top:2px}
+  .q .tag{margin-left:auto;font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:2px;
+    color:var(--red2);border:1px solid rgba(230,57,80,.4);border-radius:999px;padding:6px 14px}
+  .empty{color:var(--mut);font-size:22px;padding:22px;font-family:var(--serif);font-style:italic}
+
+  /* ── right: next-client promo + music ──── */
+  .right{grid-area:right;display:flex;flex-direction:column;gap:22px;min-height:0}
+  .promo{flex:1;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
+    background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
+  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s;transform:scale(1.04)}
   .np-bg.on{opacity:1}
-  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,15,15,.15) 0%,rgba(15,15,15,0) 35%,rgba(15,15,15,.88) 100%)}
-  .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:150px;opacity:.8}
-  .np-label{position:absolute;top:22px;left:24px;z-index:2;background:var(--gold);color:#141210;font-weight:700;font-size:16px;letter-spacing:2px;padding:8px 16px;border-radius:10px}
-  .np-body{position:absolute;left:30px;right:30px;bottom:28px;z-index:2}
-  .np-name{font-size:50px;font-weight:700;letter-spacing:-1px;text-shadow:0 2px 16px rgba(0,0,0,.7)}
-  .np-meta{font-size:24px;font-weight:600;color:#e8e2d4;margin-top:4px;text-shadow:0 2px 12px rgba(0,0,0,.7)}
-  .music{height:200px;border-radius:24px;overflow:hidden;border:1.5px solid var(--line);position:relative}
+  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.12) 0%,rgba(10,10,12,0) 32%,rgba(10,10,12,.55) 70%,rgba(8,8,10,.92) 100%)}
+  .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.16)}
+  .np-empty svg{width:160px;height:160px}
+  .np-label{position:absolute;top:22px;left:24px;z-index:2;display:flex;align-items:center;gap:9px;
+    background:var(--red);color:var(--cream);font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:3px;
+    padding:9px 16px;border-radius:11px;box-shadow:0 8px 24px rgba(200,16,46,.35)}
+  .np-label .dot{width:8px;height:8px;background:var(--cream);box-shadow:none}
+  .np-body{position:absolute;left:30px;right:30px;bottom:30px;z-index:2}
+  .np-kicker{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--cream);opacity:.85;margin-bottom:4px}
+  .np-name{font-family:var(--display);font-weight:600;font-size:54px;line-height:1;letter-spacing:.5px;text-shadow:0 3px 20px rgba(0,0,0,.8)}
+  .np-meta{font-size:23px;font-weight:600;color:#e8e2d4;margin-top:8px;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  .music{height:184px;border-radius:24px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--ink)}
   .music iframe{width:100%;height:100%;border:0}
-  .music .ml{position:absolute;top:14px;left:16px;z-index:3;background:rgba(15,15,15,.7);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--gold2);padding:6px 12px;border-radius:8px}
-  .music .play{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;
-    background:rgba(15,15,15,.8);color:var(--gold2);font-size:26px;font-weight:700;cursor:pointer;letter-spacing:.5px}
+  .music .ml{position:absolute;top:14px;left:16px;z-index:3;display:flex;align-items:center;gap:8px;
+    background:rgba(10,10,12,.72);font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:3px;color:var(--cream);
+    padding:7px 13px;border-radius:9px;backdrop-filter:blur(10px)}
+  .music .ml svg{width:15px;height:15px;color:var(--red2)}
+  .music .play{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(180deg,rgba(10,10,12,.62),rgba(10,10,12,.85));color:var(--cream);cursor:pointer}
+  .music .play .pi{width:54px;height:54px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(200,16,46,.4)}
+  .music .play .pi svg{width:24px;height:24px;color:var(--cream);margin-left:3px}
+  .music .play span{font-family:var(--display);font-weight:600;letter-spacing:3px;font-size:15px}
+  .yt-edit{position:absolute;top:14px;right:14px;z-index:5;background:rgba(10,10,12,.72);border:1px solid var(--line);
+    color:var(--cream);font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:.5px;padding:7px 12px;border-radius:9px;cursor:pointer;backdrop-filter:blur(10px)}
+  .yt-edit:hover{border-color:var(--red2);color:var(--red2)}
+  .yt-panel{position:absolute;inset:0;z-index:6;display:none;flex-direction:column;justify-content:center;gap:11px;
+    padding:20px 22px;background:rgba(10,10,12,.94);backdrop-filter:blur(14px)}
+  .yt-panel.on{display:flex}
+  .yt-panel .yt-h{font-family:var(--display);font-weight:500;letter-spacing:2px;font-size:14px;color:var(--cream)}
+  .yt-panel input{width:100%;padding:13px 14px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid var(--line2);
+    color:var(--white);font-size:15px;font-family:var(--body)}
+  .yt-panel input:focus{outline:none;border-color:var(--red2)}
+  .yt-row{display:flex;gap:10px}
+  .yt-btn{flex:1;padding:12px;border-radius:11px;border:1px solid var(--line2);background:transparent;color:var(--cream);
+    font-family:var(--display);font-weight:500;letter-spacing:1.5px;font-size:14px;cursor:pointer}
+  .yt-btn.go{background:linear-gradient(180deg,var(--red2),var(--red));border-color:transparent;color:var(--cream)}
+  .yt-btn:hover{border-color:var(--red2)}
 
-  .welcome{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 90% at 50% 30%,#1e1e1e 0%,#080808 70%);
+  /* ── ticker ────────────────────────────── */
+  .ticker{grid-area:ticker;height:64px;margin:0 -52px;border-top:1px solid var(--line);
+    background:linear-gradient(90deg,rgba(200,16,46,.10),rgba(22,48,107,.10));overflow:hidden;
+    display:flex;align-items:center;backdrop-filter:blur(10px)}
+  .ticker .track{display:flex;gap:54px;white-space:nowrap;animation:marq 32s linear infinite;padding-left:52px}
+  .ticker .it{font-family:var(--display);font-weight:500;letter-spacing:3px;font-size:18px;color:var(--cream);display:flex;align-items:center;gap:14px}
+  .ticker .it b{color:var(--red2);font-weight:600}
+  .ticker .it::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--blue2)}
+  @keyframes marq{to{transform:translateX(-50%)}}
+
+  /* ── welcome overlay ───────────────────── */
+  .welcome{position:fixed;inset:0;z-index:50;
+    background:radial-gradient(120% 90% at 50% 28%,rgba(28,20,24,.96) 0%,rgba(8,8,10,.985) 70%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-    opacity:0;pointer-events:none;transition:opacity .5s}
+    opacity:0;pointer-events:none;transition:opacity .5s;backdrop-filter:blur(8px)}
   .welcome.on{opacity:1;pointer-events:auto}
-  .welcome .hi{font-size:34px;font-weight:700;letter-spacing:8px;color:var(--gold);text-transform:uppercase}
-  .welcome .nm{font-size:120px;font-weight:700;line-height:1;margin-top:18px;letter-spacing:-2px}
-  .welcome .nm span{color:var(--gold2)}
-  .welcome .pic{margin-top:40px;width:420px;height:420px;border-radius:28px;overflow:hidden;border:4px solid var(--gold);box-shadow:0 0 80px rgba(200,168,118,.3)}
+  .welcome .hi{font-family:var(--display);font-size:32px;font-weight:500;letter-spacing:11px;color:var(--red2);text-transform:uppercase}
+  .welcome .nm{font-family:var(--display);font-size:128px;font-weight:700;line-height:1;margin-top:16px;letter-spacing:-1px}
+  .welcome .nm span{color:var(--cream)}
+  .welcome .pic{margin-top:38px;width:420px;height:420px;border-radius:30px;overflow:hidden;
+    border:3px solid rgba(230,57,80,.6);box-shadow:0 0 90px rgba(200,16,46,.28),0 30px 80px rgba(0,0,0,.6)}
   .welcome .pic img{width:100%;height:100%;object-fit:cover}
-  .welcome .cap{margin-top:24px;font-size:26px;color:var(--mut);font-weight:600}
-  .up-next-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:16px}
-  .up-next-card .unc-photo{width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--gold);flex-shrink:0}
-  .up-next-card .unc-empty{width:54px;height:54px;border-radius:10px;background:#141414;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-  .up-next-card .unc-t{font-size:28px;font-weight:700;color:var(--gold2);min-width:80px}
-  .up-next-card .unc-n{font-size:22px;font-weight:700}
-  .up-next-card .unc-m{font-size:14px;color:var(--mut);margin-top:2px}
-  .demo{position:fixed;bottom:16px;right:16px;z-index:60;background:#1B1B1B;border:1px solid #3a3a3a;color:var(--mut);
-    font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;opacity:.5}
+  .welcome .cap{margin-top:26px;font-family:var(--serif);font-style:italic;font-size:28px;color:var(--cream);opacity:.85}
 
-  /* ── Mobile layout (≤899px) ── */
-  @media(max-width:899px){
-    .screen{grid-template-columns:1fr;gap:0;padding:28px 18px;min-height:unset}
-    .left{flex-direction:column}
-    .brand .name{font-size:32px;letter-spacing:6px}
-    .brand .sub{font-size:13px;letter-spacing:3px;margin-top:5px}
-    .clock{margin-top:16px}
-    .clock .t{font-size:72px}
-    .clock .d{font-size:16px;margin-top:4px}
-    .next-title{margin-top:24px;font-size:14px;letter-spacing:2px;margin-bottom:10px}
-    .q{padding:12px 14px;gap:12px;border-radius:12px}
-    .q .qt{font-size:24px;min-width:72px}
-    .q .qn{font-size:18px}
-    .q .qm{font-size:13px}
-    .queue{gap:8px}
-    .right{margin-top:24px;gap:14px}
-    .promo{min-height:260px;border-radius:16px}
-    .np-name{font-size:30px}
-    .np-meta{font-size:16px}
-    .np-label{font-size:12px;padding:5px 10px;top:14px;left:14px}
-    .music{height:180px;border-radius:16px}
-    .welcome .nm{font-size:58px}
-    .welcome .pic{width:240px;height:240px}
-    .welcome .hi{font-size:22px;letter-spacing:5px}
-    .welcome .cap{font-size:18px}
+  .demo{position:fixed;bottom:16px;right:16px;z-index:60;background:var(--glass);border:1px solid var(--line);
+    color:var(--mut);font-size:13px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;opacity:.55;backdrop-filter:blur(10px)}
+  .demo:hover{opacity:1}
+
+  @media (prefers-reduced-motion: reduce){
+    .pole i,.dot,.ticker .track{animation:none}
   }
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+
 <div class="screen">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="mark">
+      <div class="pole"><i></i></div>
+      <div class="wordmark">
+        <div class="name">BARBER<b>SHOP</b></div>
+        <div class="est" id="estLine">Est. — Classic Cuts &amp; Beard</div>
+      </div>
+    </div>
+    <div class="status">
+      <span class="dot"></span>
+      <span class="lbl">OTVORENO</span>
+      <span class="hrs" id="hours">09 — 21h</span>
+    </div>
+  </div>
+
+  <!-- LEFT -->
   <div class="left">
-    <div class="brand"><div class="name">THE <b>COIL</b></div><div class="sub">Barbershop · Chicago</div></div>
-    <div class="clock"><div class="t" id="clock">--:--</div><div class="d" id="date"></div></div>
-    <div class="next-title" id="nextUpTitle" style="display:none">Up next</div>
-    <div class="up-next-card" id="upNextCard" style="display:none"></div>
-    <div class="next-title" style="margin-top:24px">Queue</div>
+    <div class="clock">
+      <div class="t" id="clock">--:--</div>
+      <div class="d" id="date"></div>
+    </div>
+    <div class="next-title">Na redu</div>
     <div class="queue" id="queue"></div>
   </div>
+
+  <!-- RIGHT -->
   <div class="right">
-    <div class="promo" id="chairCard">
+    <div class="promo" id="nextCard">
       <div class="np-bg" id="npBg"></div>
       <div class="np-grad"></div>
-      <div class="np-empty" id="npEmpty">💈</div>
-      <div class="np-label" id="npLabel">Welcome</div>
-      <div class="np-body"><div class="np-name" id="npName">—</div><div class="np-meta" id="npMeta"></div></div>
+      <div class="np-empty" id="npEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9a6 6 0 0 1 12 0"/><rect x="5" y="9" width="14" height="11" rx="3"/>
+          <path d="M9 9v11M15 9v11M5 12.5h14M5 16h14"/>
+        </svg>
+      </div>
+      <div class="np-label"><span class="dot"></span>NA REDU</div>
+      <div class="np-body">
+        <div class="np-kicker">Sledeći u stolici</div>
+        <div class="np-name" id="npName">—</div>
+        <div class="np-meta" id="npMeta"></div>
+      </div>
     </div>
     <div class="music">
-      <div class="ml">♪ MUSIC</div>
+      <div class="ml">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        MUZIKA
+      </div>
+      <button class="yt-edit" id="ytEdit" title="Promeni muziku">♪ promeni</button>
       <iframe id="yt" allow="autoplay; encrypted-media" src="about:blank"></iframe>
-      <div class="play" id="play">▶ Play music</div>
+      <div class="play" id="play">
+        <div class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+        <span>PUSTI MUZIKU</span>
+      </div>
+      <div class="yt-panel" id="ytPanel">
+        <div class="yt-h">Zalepi YouTube link (pesma ili plejlista)</div>
+        <input id="ytInput" placeholder="npr. youtube.com/watch?v=…  ili  …?list=…">
+        <div class="yt-row">
+          <button class="yt-btn go" id="ytGo">▶ Pusti</button>
+          <button class="yt-btn" id="ytSearch">🔎 Pretraži na YouTube</button>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- TICKER -->
+  <div class="ticker"><div class="track" id="ticker"></div></div>
 </div>
 
+<!-- WELCOME -->
 <div class="welcome" id="welcome">
-  <div class="hi">Welcome</div>
+  <div class="hi">Dobrodošao</div>
   <div class="nm" id="wName"></div>
   <div class="pic" id="wPic" style="display:none"><img id="wImg"></div>
   <div class="cap" id="wCap"></div>
 </div>
 
-<div class="demo" id="demo">▶ Demo welcome</div>
+<div class="demo" id="demo">▶ Demo pozdrav</div>
 
+<script type="module">
+  (async () => {
+    const bg = document.getElementById('bg');
+    try {
+      const { mountWaveBackground } = await import('./wave-bg.js');
+      mountWaveBackground(bg, {
+        intensity: 0.5,
+        resolutionScale: 1.0,
+        colors: { red: '#C8102E', blue: '#16306B', cream: '#F4EFE2', bg: '#0A0A0C' }
+      });
+    } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
+  })();
+</script>
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 
-let _lastMin='', _lastQueueKey='';
+// header chrome from config
+$('#estLine').textContent = SALON.tagline || 'Classic Cuts';
+$('#hours').textContent = String(SALON.hours.open).padStart(2,'0') + ' — ' + SALON.hours.close + 'h';
+
+// service ticker (signage feel)
+$('#ticker').innerHTML = (() => {
+  const items = SERVICES.map(s => `<div class="it">${s.name} <b>${s.price} RSD</b></div>`).join('')
+    + `<div class="it">WALK-INS WELCOME</div><div class="it">${SALON.tagline}</div>`;
+  return items + items; // duplicate for seamless loop
+})();
+
+// clock
 function tick(){
   const d=new Date();
-  $('#clock').textContent = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
-  $('#date').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
+  $('#clock').innerHTML = `${hh}<span>:</span>${mm}`;
+  $('#date').textContent = d.toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long'});
   checkWelcome(d);
-  const m=d.toTimeString().slice(0,5);
-  if(m!==_lastMin){ _lastMin=m; renderQueue(); }
 }
 setInterval(tick,1000);
 
-$('#play').onclick = ()=>{ $('#yt').src = SALON.youtube + (SALON.youtube.includes('?')?'&':'?') + 'autoplay=1'; $('#play').style.display='none'; };
-
-function toMins(timeStr){ const [h,m]=timeStr.split(':').map(Number); return h*60+m; }
-
-function getSessionState(){
-  const nowMins = new Date().getHours()*60 + new Date().getMinutes();
-  const today = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
-  const current=[], upcoming=[];
-  for(const a of today){
-    const start=toMins(a.time);
-    const dur=(serviceById(a.serviceId)?.min)||30;
-    if(start<=nowMins && nowMins<start+dur) current.push(a);
-    else if(start>nowMins) upcoming.push(a);
-  }
-  return { current, next: upcoming[0]||null, upcoming };
+// ── MUZIKA: zalepi YouTube link (pesma/plejlista) ili pretraži ──
+function ytEmbed(u){
+  u=(u||'').trim(); let m;
+  if(/youtube\.com\/embed\//.test(u)) return u;                                  // već embed
+  if(m=u.match(/[?&]list=([\w-]+)/))   return 'https://www.youtube.com/embed/videoseries?list='+m[1]; // plejlista
+  if(m=u.match(/[?&]v=([\w-]+)/))       return 'https://www.youtube.com/embed/'+m[1];                  // watch?v=
+  if(m=u.match(/youtu\.be\/([\w-]+)/))  return 'https://www.youtube.com/embed/'+m[1];                  // youtu.be
+  if(/^[\w-]{11}$/.test(u))             return 'https://www.youtube.com/embed/'+u;                     // goli ID
+  return null;
 }
+function currentYt(){ return localStorage.getItem('yt_url') || SALON.youtube; }
+function playYt(embed){ $('#yt').src = embed + (embed.includes('?')?'&':'?') + 'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
 
-// desna karta — trenutni klijent u stolici
-function setChairCard(a){
-  const s=serviceById(a?.serviceId)?.name||'', b=barberById(a?.barberId)?.name||'';
-  $('#npLabel').textContent = 'Welcome';
-  $('#npName').textContent = a ? a.name : '—';
-  $('#npMeta').textContent = a ? `${s} · ${b}` : 'No one in chair';
-  const photo = a ? getPhoto(a.name, a.phone) : null;
-  if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
-  else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
-}
+$('#play').onclick   = ()=> playYt(currentYt());
+$('#ytEdit').onclick = ()=>{ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
+$('#ytGo').onclick   = ()=>{
+  const e=ytEmbed($('#ytInput').value);
+  if(!e){ $('#ytInput').placeholder='Nevažeći link — zalepi YouTube URL'; $('#ytInput').value=''; return; }
+  localStorage.setItem('yt_url', e); playYt(e);
+};
+$('#ytInput').onkeydown = ev=>{ if(ev.key==='Enter') $('#ytGo').click(); };
+$('#ytSearch').onclick = ()=>{
+  const q=encodeURIComponent($('#ytInput').value.trim()||'lofi barbershop');
+  window.open('https://www.youtube.com/results?search_query='+q,'_blank');
+};
 
-// leva "Up next" kartica
-function setUpNext(a){
-  if(!a){ $('#nextUpTitle').style.display='none'; $('#upNextCard').style.display='none'; return; }
-  const s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
-  const photo=getPhoto(a.name,a.phone);
-  const photoEl = photo
-    ? `<img class="unc-photo" src="${photo}">`
-    : `<div class="unc-empty">💈</div>`;
-  $('#upNextCard').innerHTML = `${photoEl}<div class="unc-t">${a.time}</div><div><div class="unc-n">${a.name}</div><div class="unc-m">${s} · ${b}</div></div>`;
-  $('#nextUpTitle').style.display='block';
-  $('#upNextCard').style.display='flex';
-}
-
-// cycling kroz trenutne klijente (više majstora)
-let _cycleIdx=0, _cycleClients=[], _cycleTimer=null;
-function startCycle(clients){
-  if(clients.map(a=>a.id).join(',') === _cycleClients.map(a=>a.id).join(',')) return;
-  clearInterval(_cycleTimer);
-  _cycleClients=clients; _cycleIdx=0;
-  setChairCard(_cycleClients[0]);
-  if(clients.length>1) _cycleTimer=setInterval(()=>{
-    $('#npBg').style.transition='opacity .8s'; $('#npBg').style.opacity='0';
-    setTimeout(()=>{
-      _cycleIdx=(_cycleIdx+1)%_cycleClients.length;
-      setChairCard(_cycleClients[_cycleIdx]);
-      $('#npBg').style.opacity='';
-      setTimeout(()=>{ $('#npBg').style.transition=''; }, 900);
-    }, 850);
-  }, 120000);
-}
-
+// queue + kartica „Na redu" (sledeći klijent + njegova prošla fotka)
 function renderQueue(){
-  const {current, next, upcoming} = getSessionState();
-  const queueKey = [...current, next, ...upcoming].map(a=>a?.id+a?.greeted).join(',');
-  if(queueKey === _lastQueueKey) return;
-  _lastQueueKey = queueKey;
-
-  // queue — samo nadolazeći (current je na kartici desno)
-  $('#queue').innerHTML = upcoming.slice(0,5).length ? upcoming.slice(0,5).map(a=>{
+  const now=new Date(), nowT=now.toTimeString().slice(0,5);
+  const all=loadAppts().filter(a=>a.date===todayStr() && a.time>=nowT.slice(0,2)+':00')
+    .sort((x,y)=>x.time.localeCompare(y.time));
+  const list=all.slice(0,3);
+  $('#queue').innerHTML = list.length ? list.map((a,i)=>{
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
-    return `<div class="q"><div class="qt">${a.time}</div>
-      <div><div class="qn">${a.name}</div><div class="qm">${s} · ${b}</div></div></div>`;
-  }).join('') : '<div class="empty">No more appointments today.</div>';
+    return `<div class="q ${i===0?'now':''}"><div class="qt">${a.time}</div>
+      <div><div class="qn">${a.name}</div><div class="qm">${s} · ${b}</div></div>
+      ${i===0?'<div class="tag">SAD</div>':''}</div>`;
+  }).join('') : '<div class="empty">Nema više termina danas — uđi, sediš odmah.</div>';
 
-  // up next kartica iznad queue
-  setUpNext(next);
-
-  // desna karta — trenutni klijent
-  if(current.length>0){ startCycle(current); }
-  else { clearInterval(_cycleTimer); _cycleClients=[]; setChairCard(null); }
+  // kartica sledećeg klijenta
+  const next=all[0];
+  if(next){
+    const s=serviceById(next.serviceId)?.name||'', b=barberById(next.barberId)?.name||'';
+    const photo=getPhoto(next.name,next.phone);
+    $('#npName').textContent=next.name;
+    $('#npMeta').textContent=`${next.time} · ${s} · ${b}`;
+    if(photo){ $('#npBg').style.backgroundImage=`url('${photo}')`; $('#npBg').classList.add('on'); $('#npEmpty').style.display='none'; }
+    else { $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex'; }
+  } else {
+    $('#npName').textContent='—'; $('#npMeta').textContent='Nema termina';
+    $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex';
+  }
 }
 
+// WELCOME logic
 let welcomeTimer=null;
 function showWelcome(a){
   const first=(a.name||'').split(' ')[0]||a.name;
-  $('#wName').innerHTML=`<span>${first}</span>`;
+  $('#wName').innerHTML = `<span>${first}</span>`;
   const photo=getPhoto(a.name,a.phone);
-  if(photo){ $('#wImg').src=photo; $('#wPic').style.display='block'; $('#wCap').textContent='Good to see you again 💈'; }
-  else { $('#wPic').style.display='none'; $('#wCap').textContent='Welcome to The Coil 💈'; }
+  if(photo){ $('#wImg').src=photo; $('#wPic').style.display='block'; $('#wCap').textContent='Lepo je videti te ponovo.'; }
+  else { $('#wPic').style.display='none'; $('#wCap').textContent='Dobrodošao u salon.'; }
   $('#welcome').classList.add('on');
   clearTimeout(welcomeTimer);
   welcomeTimer=setTimeout(()=>$('#welcome').classList.remove('on'), 12000);
@@ -237,17 +344,19 @@ function showWelcome(a){
 function checkWelcome(d){
   const t=d.toTimeString().slice(0,5);
   loadAppts().filter(a=>a.date===todayStr() && a.time===t && !a.greeted).forEach(a=>{
-    a.greeted=true;
+    a.greeted=true;  // lokalno odmah, da se ne ponovi
     fetch('/api/appointments/greet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})});
     showWelcome(a);
   });
 }
 
+// live updates (SSE preko api.js)
 onData(renderQueue);
 
+// demo button — pozdrav za najskoriji termin (ili test)
 $('#demo').onclick=()=>{
   const list=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
-  showWelcome(list[0]||{name:'Test Client',phone:''});
+  showWelcome(list[0] || {name:'Test Klijent', phone:''});
 };
 
 tick(); renderQueue();

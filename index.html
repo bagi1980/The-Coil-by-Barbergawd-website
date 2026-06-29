@@ -1,70 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Coil — Booking</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Barbershop — Zakazivanje</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Bodoni+Moda:ital,opsz,wght@1,6..96,400;1,6..96,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<canvas id="bg"></canvas>
+<div class="bg-scrim"></div>
+
 <div class="wrap">
+  <div class="topnav">
+    <div class="mini"><div class="pole"><i></i></div><b>BARBERSHOP</b></div>
+    <div class="open" id="openPill">OTVORENO · 09—21h</div>
+  </div>
+
   <div class="brand">
-    <div class="name">THE <b>COIL</b></div>
-    <div class="sub">Barbershop · Chicago</div>
+    <div class="kicker">Est. — Classic Cuts &amp; Beard</div>
+    <div class="name">BARBER<b>SHOP</b></div>
+    <div class="sub">Šišanje · Brada · Hot Towel</div>
     <div class="rule"></div>
   </div>
 
+  <p class="lead">Stara škola brijačnice, novi standard. Oštri rezovi, topli peškir
+    i stolica koja te čeka — zakaži za 30 sekundi i sedaš tačno na vreme.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">12<span>k+</span></div><div class="l">Šišanja</div></div>
+    <div class="stat"><div class="v">4.9<span>★</span></div><div class="l">Ocena</div></div>
+    <div class="stat"><div class="v">3</div><div class="l">Majstora</div></div>
+    <div class="stat"><div class="v">30<span>s</span></div><div class="l">Zakazivanje</div></div>
+  </div>
+
   <div class="tabs">
-    <div class="tab sel" data-tab="book">Book appointment</div>
-    <div class="tab" data-tab="admin">Barber (admin)</div>
-    <div class="tab" data-tab="tv" onclick="location.href='tv.html'">📺 TV screen</div>
+    <div class="tab sel" data-tab="book">Zakaži termin</div>
+    <div class="tab" data-tab="admin">Frizer (admin)</div>
+    <div class="tab" data-tab="tv" onclick="location.href='tv.html'">📺 TV ekran</div>
   </div>
 
   <!-- BOOKING -->
   <div id="book">
-    <div class="section">1 · Service</div>
+    <div class="section" data-n="1">Usluga</div>
     <div class="chips" id="services"></div>
-    <div class="section">2 · Barber</div>
+    <div class="section" data-n="2">Frizer</div>
     <div class="chips" id="barbers"></div>
-    <div class="section">3 · Time</div>
+    <div class="section" data-n="3">Termin</div>
     <div class="row" style="margin-bottom:14px">
       <select id="day"></select>
     </div>
     <div class="slots" id="slots"></div>
-    <div class="section">4 · Your details</div>
+    <div class="section" data-n="4">Tvoji podaci</div>
     <div class="row">
-      <input id="name" placeholder="Full name">
-      <input id="phone" placeholder="Phone">
+      <input id="name" placeholder="Ime i prezime">
+      <input id="phone" placeholder="Telefon">
     </div>
-    <button class="btn" id="submit" disabled>Book appointment</button>
+    <button class="btn" id="submit" disabled>ZAKAŽI TERMIN</button>
     <div id="result"></div>
+
+    <!-- WHY US -->
+    <div class="section" data-n="✦">Zašto baš ovde</div>
+    <div class="features">
+      <div class="feature">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg></div>
+        <h4>Precizan rez</h4>
+        <p>Fade, klasika ili pomp — majstori sa godinama iza makaza.</p>
+      </div>
+      <div class="feature">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h12"/></svg></div>
+        <h4>Brada &amp; peškir</h4>
+        <p>Topli peškir, britva i oblikovanje brade do detalja.</p>
+      </div>
+      <div class="feature">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h4>Bez čekanja</h4>
+        <p>Zakažeš termin — sedaš tačno na vreme, bez reda.</p>
+      </div>
+    </div>
+
+    <!-- GALLERY -->
+    <div class="section" data-n="✦">Radovi iz stolice</div>
+    <div class="gallery">
+      <img src="img/demo-client.png" alt="Šišanje — primer rada">
+      <img src="img/demo-client2.png" alt="Fade — primer rada">
+      <img src="img/demo-client3.png" alt="Brada i stil — primer rada">
+    </div>
+
+    <!-- TESTIMONIAL -->
+    <div class="section" data-n="✦">Šta kažu</div>
+    <div class="quote">
+      <div class="stars">★★★★★</div>
+      <p>„Najbolji fade u gradu. Dođeš, sedneš, izađeš kao nov — i muzika je uvek na nivou.”</p>
+      <div class="by">— Stalni gost</div>
+    </div>
   </div>
 
   <!-- ADMIN -->
   <div id="admin" style="display:none">
-    <button class="btn ghost" id="loadDemo">↻ Load demo (reset for presentation)</button>
-    <div class="section">Today's appointments</div>
+    <button class="btn ghost" id="loadDemo">↻ Učitaj demo (reset za prezentaciju)</button>
+    <div class="section" data-n="•">Današnji termini</div>
     <div class="list" id="todayList"></div>
-    <div class="section">Add session photo (for TV welcome + Instagram)</div>
-    <div class="row"><input id="pName" placeholder="Client name (as on booking)"></div>
-    <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Client phone"></div>
-    <label class="btn ghost" style="display:inline-block;margin-top:10px;cursor:pointer">
-      📷 Choose photo
-      <input type="file" id="pFile" accept="image/*" style="display:none">
-    </label>
-    <span id="pFileName" class="muted" style="margin-left:10px"></span>
-    <button class="btn ghost" id="savePhoto" style="margin-top:10px">Save photo</button>
+    <div class="section" data-n="•">Dodaj fotku sesije (za TV pozdrav + Instagram)</div>
+    <div class="row"><input id="pName" placeholder="Ime klijenta (kao kod zakazivanja)"></div>
+    <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Telefon klijenta"></div>
+    <input type="file" id="pFile" accept="image/*" style="margin-top:10px">
+    <button class="btn ghost" id="savePhoto">Sačuvaj fotku</button>
     <div id="pResult" class="muted"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="foot">
+    <div class="fname">BARBER<b>SHOP</b></div>
+    <div class="fsub">Classic Cuts · Hot Towel · Beard</div>
+    <div class="fhrs">Radno vreme: Pon—Ned · 09—21h · Walk-ins welcome</div>
   </div>
 </div>
 
+<script type="module">
+  (async () => {
+    const bg = document.getElementById('bg');
+    try {
+      const { mountWaveBackground } = await import('./wave-bg.js');
+      mountWaveBackground(bg, {
+        intensity: 0.5,
+        resolutionScale: 1.0,
+        colors: { red: '#C8102E', blue: '#16306B', cream: '#F4EFE2', bg: '#0A0A0C' }
+      });
+    } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
+  })();
+</script>
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let sel = { service:null, barber:null, day:todayStr(), time:null };
 
+// header pill from config
+$('#openPill').textContent = `OTVORENO · ${String(SALON.hours.open).padStart(2,'0')}—${SALON.hours.close}h`;
+
+// tabs
 document.querySelectorAll('.tab[data-tab]').forEach(t=>{
   if(t.dataset.tab==='tv') return;
   t.onclick=()=>{
@@ -76,24 +153,27 @@ document.querySelectorAll('.tab[data-tab]').forEach(t=>{
   };
 });
 
+// services
 $('#services').innerHTML = SERVICES.map(s=>
-  `<div class="chip" data-s="${s.id}">${s.name}<small>$${s.price} · ${s.min} min</small></div>`).join('');
+  `<div class="chip" data-s="${s.id}">${s.name}<small>${s.price} RSD · ${s.min} min</small></div>`).join('');
 $('#services').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
   document.querySelectorAll('#services .chip').forEach(x=>x.classList.remove('sel'));
   c.classList.add('sel'); sel.service=c.dataset.s; refreshSlots(); check(); };
 
+// barbers
 $('#barbers').innerHTML = BARBERS.map(b=>`<div class="chip" data-b="${b.id}">${b.name}</div>`).join('');
 $('#barbers').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
   document.querySelectorAll('#barbers .chip').forEach(x=>x.classList.remove('sel'));
   c.classList.add('sel'); sel.barber=c.dataset.b; refreshSlots(); check(); };
 
+// days
 const d0=new Date(), d1=new Date(Date.now()+864e5);
-$('#day').innerHTML = `<option value="${todayStr(d0)}">Today (${d0.toLocaleDateString('en-US')})</option>
-  <option value="${todayStr(d1)}">Tomorrow (${d1.toLocaleDateString('en-US')})</option>`;
+$('#day').innerHTML = `<option value="${todayStr(d0)}">Danas (${d0.toLocaleDateString('sr-RS')})</option>
+  <option value="${todayStr(d1)}">Sutra (${d1.toLocaleDateString('sr-RS')})</option>`;
 $('#day').onchange = e=>{ sel.day=e.target.value; sel.time=null; refreshSlots(); check(); };
 
 function refreshSlots(){
-  if(!sel.barber){ $('#slots').innerHTML='<div class="muted">Select a barber</div>'; return; }
+  if(!sel.barber){ $('#slots').innerHTML='<div class="muted">Izaberi frizera</div>'; return; }
   const free = freeSlots(sel.day, sel.barber);
   $('#slots').innerHTML = free.map(t=>`<div class="slot" data-t="${t}">${t}</div>`).join('');
 }
@@ -109,63 +189,33 @@ $('#submit').onclick = async ()=>{
   const a = await addAppt({ date:sel.day, time:sel.time, barberId:sel.barber, serviceId:sel.service,
     name:$('#name').value.trim(), phone:$('#phone').value.trim() });
   const b=barberById(sel.barber).name, s=serviceById(sel.service);
-  $('#result').innerHTML = `<div class="ok"><b>Appointment booked!</b><br>${a.name}, ${s.name} with ${b}<br>
-    ${sel.day===todayStr()?'Today':'Tomorrow'} at ${a.time}. See you! 💈</div>`;
+  $('#result').innerHTML = `<div class="ok"><b>TERMIN ZAKAZAN</b><br>${a.name}, ${s.name} kod ${b}<br>
+    ${sel.day===todayStr()?'Danas':'Sutra'} u ${a.time}. Vidimo se!</div>`;
   sel.time=null; refreshSlots();
 };
 
+// ADMIN
 function renderToday(){
   const list = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
   $('#todayList').innerHTML = list.length ? list.map(a=>{
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
     const ph=getPhoto(a.name,a.phone);
     const thumb = ph
-      ? `<img src="${ph}" title="Last cut" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--gold);cursor:pointer" onclick="prefillPhoto('${a.name.replace(/'/g,"\\'")}','${a.phone}')">`
-      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#141414;border:1.5px solid var(--line);color:var(--mut);font-size:22px;cursor:pointer" onclick="prefillPhoto('${a.name.replace(/'/g,"\\'")}','${a.phone}')">＋</div>`;
+      ? `<img src="${ph}" title="Prošlo šišanje" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:2px solid var(--red2)">`
+      : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--mut);font-size:22px">＋</div>`;
     return `<div class="item">${thumb}<div class="t">${a.time}</div>
-      <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 has previous photo':''}</div></div>
-      <span class="x" onclick="removeAppt('${a.id}')">Delete</span></div>`;
-  }).join('') : '<div class="muted">No appointments today.</div>';
+      <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 ima prošlu fotku':''}</div></div>
+      <span class="x" onclick="removeAppt('${a.id}')">Obriši</span></div>`;
+  }).join('') : '<div class="muted">Nema termina za danas.</div>';
 }
-function prefillPhoto(name, phone){
-  $('#pName').value=name; $('#pPhone').value=phone;
-  $('#pFile').click();
-  document.querySelector('.tab[data-tab="admin"]').scrollIntoView({behavior:'smooth'});
-}
-$('#pFile').onchange=()=>{ $('#pFileName').textContent=$('#pFile').files[0]?.name||''; };
 $('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
-function resizeImage(file, maxPx=600, quality=0.8) {
-  return new Promise((res,rej)=>{
-    const reader=new FileReader();
-    reader.onerror=rej;
-    reader.onload=e=>{
-      const img=new Image();
-      img.onerror=rej;
-      img.onload=()=>{
-        const scale=Math.min(1, maxPx/Math.max(img.width,img.height));
-        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-        const c=document.createElement('canvas'); c.width=w; c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        res(c.toDataURL('image/jpeg', quality));
-      };
-      img.src=e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-$('#savePhoto').onclick = async ()=>{
-  const f=$('#pFile').files[0];
-  if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Enter a name and choose a photo.'; return; }
-  $('#pResult').textContent='Saving…';
-  try {
-    const dataUrl = await resizeImage(f);
-    const resp = await fetch('/api/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('#pName').value,phone:$('#pPhone').value,dataUrl})});
-    if(!resp.ok) throw new Error(await resp.text());
-    $('#pResult').textContent='✓ Photo saved — will appear on TV on next visit.';
-    renderToday();
-  } catch(e){ $('#pResult').textContent='Error: '+e.message; }
+$('#savePhoto').onclick = ()=>{
+  const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Unesi ime i izaberi fotku.'; return; }
+  const r=new FileReader(); r.onload=()=>{ savePhoto($('#pName').value, $('#pPhone').value, r.result);
+    $('#pResult').textContent='✓ Fotka sačuvana — pojaviće se na TV-u pri sledećoj poseti.'; }; r.readAsDataURL(f);
 };
 
+// live osvežavanje (kad neko drugi zakaže / kad stignu podaci)
 onData(()=>{ if(sel.barber) refreshSlots(); if($('#admin').style.display!=='none') renderToday(); });
 refreshSlots();
 </script>
