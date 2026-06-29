@@ -6,7 +6,7 @@ const SALON = {
   hours: { open: 9, close: 21 },
   slotMin: 30,
   // Muzika salona — zameni svojom YouTube plejlistom/kanalom. (na klik se pušta sa zvukom)
-  youtube: "https://www.youtube.com/embed/videoseries?list=PLOzDu-MXXLliO9fBNZOQTBDddoA3FzZUo"
+  youtube: "https://www.youtube.com/embed/lCKLzHyhStQ?loop=1&playlist=lCKLzHyhStQ"
 };
 
 const SERVICES = [
