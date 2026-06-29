@@ -124,10 +124,11 @@
     color:var(--red2);border:1px solid rgba(230,57,80,.4);border-radius:999px;padding:4px 10px}
   /* ── TV nav ────────────────────────────── */
   .tvnav{position:fixed;top:20px;right:20px;z-index:60;display:flex;gap:10px}
-  .tvnav a{font-family:var(--body);background:var(--glass);border:1px solid var(--line2);color:var(--mut);
+  .tvnav a,.tvnav-wi{font-family:var(--body);background:var(--glass);border:1px solid var(--line2);color:var(--mut);
     text-decoration:none;font-size:14px;font-weight:700;letter-spacing:.5px;padding:9px 16px;border-radius:10px;
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.2s}
-  .tvnav a:hover{border-color:rgba(230,57,80,.6);color:var(--cream)}
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.2s;cursor:pointer}
+  .tvnav a:hover,.tvnav-wi:hover{border-color:rgba(230,57,80,.6);color:var(--cream)}
+  .tvnav-wi{background:linear-gradient(180deg,rgba(200,16,46,.35),rgba(200,16,46,.22));border-color:rgba(230,57,80,.45);color:var(--cream)}
 
   /* ── cycling panel (desno) ─────────────── */
   /* .promo se koristi i dalje — dodajemo fade logiku u JS */
@@ -161,6 +162,45 @@
   .yt-btn.go{background:linear-gradient(180deg,var(--red2),var(--red));border-color:transparent;color:var(--cream)}
   .yt-btn:hover{border-color:var(--red2)}
 
+  /* ── Walk-in modal ─────────────────────── */
+  .wi-wrap{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.72);display:none;
+    align-items:center;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .wi-wrap.on{display:flex}
+  .wi-modal{background:#16161c;border:1px solid var(--line2);border-radius:26px;padding:40px;
+    width:min(480px,92vw);box-shadow:0 30px 90px rgba(0,0,0,.7)}
+  .wi-title{font-family:var(--display);font-weight:600;font-size:28px;letter-spacing:4px;margin-bottom:28px}
+  .wi-label{font-size:13px;font-weight:700;letter-spacing:3px;color:var(--mut);text-transform:uppercase;margin:20px 0 10px}
+  .wi-input{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:12px;
+    padding:14px 18px;color:var(--white);font-family:var(--body);font-size:18px;outline:none}
+  .wi-input:focus{border-color:var(--red2)}
+  .wi-chips{display:flex;flex-wrap:wrap;gap:9px}
+  .wi-chip{font-family:var(--body);font-size:14px;font-weight:600;padding:9px 16px;border-radius:10px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--mut);cursor:pointer;transition:.15s}
+  .wi-chip:hover{border-color:var(--line2);color:var(--cream)}
+  .wi-chip.sel{background:rgba(200,16,46,.22);border-color:rgba(230,57,80,.6);color:var(--cream)}
+  .wi-foot{display:flex;gap:12px;margin-top:28px}
+  .wi-btn{flex:1;padding:14px;border-radius:12px;font-family:var(--display);font-weight:600;
+    font-size:15px;letter-spacing:2px;cursor:pointer;border:1px solid var(--line2);
+    background:transparent;color:var(--mut);transition:.15s}
+  .wi-btn.ok{background:linear-gradient(180deg,var(--red2),var(--red));border-color:transparent;color:var(--cream)}
+  .wi-btn.ok:disabled{opacity:.35;cursor:not-allowed}
+  .wi-btn:not(.ok):hover{border-color:var(--line2);color:var(--cream)}
+  /* ── Closed overlay ─────────────────────── */
+  .closed-wrap{position:fixed;inset:0;z-index:80;background:rgba(8,8,10,.92);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .closed-wrap.on{display:flex}
+  .closed-mark{display:flex;align-items:center;gap:18px;margin-bottom:40px}
+  .closed-mark .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);
+    overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
+  .closed-mark .pole i{position:absolute;left:-50%;top:-200%;width:200%;height:600%;
+    background:repeating-linear-gradient(120deg,var(--red) 0 14px,var(--cream) 14px 28px,var(--blue) 28px 42px,var(--cream) 42px 56px);
+    animation:poleSpin 4s linear infinite}
+  .closed-mark .wm{font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:8px;color:var(--white)}
+  .closed-mark .wm b{color:var(--red2)}
+  .closed-big{font-family:var(--display);font-weight:600;font-size:clamp(72px,9vw,120px);
+    letter-spacing:14px;color:var(--white);line-height:1}
+  .closed-sub{font-family:var(--serif);font-style:italic;font-size:28px;color:var(--mut);margin-top:20px}
   /* ── ticker ────────────────────────────── */
   .ticker{grid-area:ticker;height:64px;margin:0 -52px;border-top:1px solid var(--line);
     background:linear-gradient(90deg,rgba(200,16,46,.10),rgba(22,48,107,.10));overflow:hidden;
@@ -243,7 +283,34 @@
 <nav class="tvnav">
   <a href="index.html">＋ Zakaži</a>
   <a href="index.html#admin">⚙ Admin</a>
+  <button class="tvnav-wi" id="wiBtn">🚶 Walk-in</button>
 </nav>
+
+<!-- Walk-in modal -->
+<div class="wi-wrap" id="wiWrap">
+  <div class="wi-modal">
+    <div class="wi-title">Walk-in klijent</div>
+    <input class="wi-input" id="wiName" placeholder="Ime klijenta" autocomplete="off">
+    <div class="wi-label">Usluga</div>
+    <div class="wi-chips" id="wiServices"></div>
+    <div class="wi-label">Frizer</div>
+    <div class="wi-chips" id="wiBarbers"></div>
+    <div class="wi-foot">
+      <button class="wi-btn" id="wiCancel">Otkaži</button>
+      <button class="wi-btn ok" id="wiOk" disabled>Dodaj u red</button>
+    </div>
+  </div>
+</div>
+
+<!-- Closed overlay -->
+<div class="closed-wrap" id="closedWrap">
+  <div class="closed-mark">
+    <div class="pole"><i></i></div>
+    <div class="wm">BARBER<b>SHOP</b></div>
+  </div>
+  <div class="closed-big">ZATVORENO</div>
+  <div class="closed-sub" id="closedSub">Vidimo se sutra u 09:00</div>
+</div>
 
 <div class="screen">
   <!-- TOP BAR -->
@@ -550,7 +617,61 @@ $('#demo').onclick=()=>{
   showWelcome(list[0]||{name:'Test Klijent',phone:''});
 };
 
-tick(); renderQueue();
+// ── Walk-in ──
+(()=>{
+  let wiService=null, wiBarber=null;
+  $('#wiServices').innerHTML=SERVICES.map(s=>`<div class="wi-chip" data-id="${s.id}">${s.name}</div>`).join('');
+  $('#wiBarbers').innerHTML=BARBERS.map(b=>`<div class="wi-chip" data-id="${b.id}">${b.name}</div>`).join('');
+  function wiCheck(){ $('#wiOk').disabled=!(wiService&&wiBarber&&$('#wiName').value.trim()); }
+  $('#wiServices').onclick=e=>{
+    const c=e.target.closest('.wi-chip'); if(!c) return;
+    document.querySelectorAll('#wiServices .wi-chip').forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel'); wiService=c.dataset.id; wiCheck();
+  };
+  $('#wiBarbers').onclick=e=>{
+    const c=e.target.closest('.wi-chip'); if(!c) return;
+    document.querySelectorAll('#wiBarbers .wi-chip').forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel'); wiBarber=c.dataset.id; wiCheck();
+  };
+  $('#wiName').oninput=wiCheck;
+  $('#wiBtn').onclick=()=>{ $('#wiWrap').classList.add('on'); $('#wiName').focus(); };
+  $('#wiCancel').onclick=()=>closeWi();
+  $('#wiWrap').onclick=e=>{ if(e.target===$('#wiWrap')) closeWi(); };
+  function closeWi(){
+    $('#wiWrap').classList.remove('on');
+    $('#wiName').value=''; wiService=null; wiBarber=null;
+    document.querySelectorAll('.wi-chip').forEach(x=>x.classList.remove('sel'));
+    wiCheck();
+  }
+  $('#wiOk').onclick=async()=>{
+    const name=$('#wiName').value.trim();
+    if(!name||!wiService||!wiBarber) return;
+    // Nađi prvi slobodan slot od sada
+    const free=freeSlots(todayStr(),wiBarber);
+    const now=new Date(), nowStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const slot=free.find(t=>t>=nowStr)||free[0];
+    if(!slot){ alert('Nema slobodnih termina za danas.'); return; }
+    $('#wiOk').disabled=true;
+    await addAppt({date:todayStr(),time:slot,barberId:wiBarber,serviceId:wiService,name,phone:'walk-in'});
+    closeWi();
+  };
+})();
+
+// ── Closed mode ──
+function checkClosed(){
+  const h=new Date().getHours();
+  const closed=h<SALON.hours.open||h>=SALON.hours.close;
+  $('#closedWrap').classList.toggle('on',closed);
+  if(closed){
+    const openH=String(SALON.hours.open).padStart(2,'0')+':00';
+    $('#closedSub').textContent = h>=SALON.hours.close
+      ? `Vidimo se sutra u ${openH}`
+      : `Otvaramo u ${openH}`;
+  }
+}
+setInterval(checkClosed, 60000);
+
+tick(); renderQueue(); checkClosed();
 </script>
 </body>
 </html>

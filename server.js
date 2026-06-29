@@ -22,6 +22,7 @@ const TODAY = () => {
   return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
 };
 function prune(list) { const today = TODAY(); return (list || []).filter(a => a && a.date >= today); }
+function pruneBreaks(list) { const today = TODAY(); return (list || []).filter(b => b && b.date >= today); }
 
 // Model: salon:data = { appointments, photoVers{key:ts} } — sitno, podesno za čest polling.
 // Svaka slika je u salon:photo:<key>. Lokalno: data.json drži sve.
@@ -41,7 +42,8 @@ async function load() {
     d.appointments = prune(d.appointments);
     if (d.appointments.length !== before) dirty = true;
     if (!d.photoVers) { d.photoVers = {}; dirty = true; }
-    if (dirty) await redis.set("salon:data", { appointments: d.appointments, photoVers: d.photoVers });
+    d.breaks = pruneBreaks(d.breaks);
+    if (dirty) await redis.set("salon:data", { appointments: d.appointments, photoVers: d.photoVers, breaks: d.breaks });
     return d;
   }
   let d;
@@ -50,12 +52,13 @@ async function load() {
   d.appointments = prune(d.appointments);
   d.photos = d.photos || {};
   if (!d.photoVers) { d.photoVers = {}; for (const k of Object.keys(d.photos)) d.photoVers[k] = 1; }
+  d.breaks = pruneBreaks(d.breaks);
   return d;
 }
 
 async function save(d) {
-  if (redis) { await redis.set("salon:data", { appointments: d.appointments || [], photoVers: d.photoVers || {} }); return; }
-  fs.writeFileSync(DB, JSON.stringify({ appointments: d.appointments || [], photos: d.photos || {}, photoVers: d.photoVers || {} }, null, 2));
+  if (redis) { await redis.set("salon:data", { appointments: d.appointments || [], photoVers: d.photoVers || {}, breaks: d.breaks || [] }); return; }
+  fs.writeFileSync(DB, JSON.stringify({ appointments: d.appointments || [], photos: d.photos || {}, photoVers: d.photoVers || {}, breaks: d.breaks || [] }, null, 2));
 }
 
 async function getPhoto(key) {
@@ -89,7 +92,25 @@ async function handler(req, res) {
 
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,DELETE", "Access-Control-Allow-Headers": "Content-Type" }); return res.end(); }
 
-  if (p === "/api/state" && req.method === "GET") { const d = await load(); return json(res, 200, { appointments: d.appointments || [], photoVers: d.photoVers || {} }); }
+  if (p === "/api/state" && req.method === "GET") { const d = await load(); return json(res, 200, { appointments: d.appointments || [], photoVers: d.photoVers || {}, breaks: d.breaks || [] }); }
+
+  if (p === "/api/breaks" && req.method === "POST") {
+    const data = await load();
+    const b = await body(req);
+    b.id = "br" + Date.now();
+    data.breaks = data.breaks || [];
+    data.breaks.push(b);
+    await save(data); broadcast();
+    return json(res, 200, b);
+  }
+
+  if (p.startsWith("/api/breaks/") && req.method === "DELETE") {
+    const data = await load();
+    const id = p.split("/").pop();
+    data.breaks = (data.breaks || []).filter(x => x.id !== id);
+    await save(data); broadcast();
+    return json(res, 200, { ok: true });
+  }
 
   if (p === "/api/photo" && req.method === "GET") return json(res, 200, { dataUrl: await getPhoto(u.searchParams.get("key") || "") });
 
