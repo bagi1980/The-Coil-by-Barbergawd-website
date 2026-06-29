@@ -240,6 +240,9 @@ $('#savePhoto').onclick = ()=>{
 // live osvežavanje (kad neko drugi zakaže / kad stignu podaci)
 onData(()=>{ if(sel.barber) refreshSlots(); if($('#admin').style.display!=='none') renderToday(); });
 refreshSlots();
+
+// deeplink sa TV ekrana: index.html#admin odmah otvara admin tab
+if(location.hash==='#admin') document.querySelector('.tab[data-tab="admin"]')?.click();
 </script>
 </body>
 </html>

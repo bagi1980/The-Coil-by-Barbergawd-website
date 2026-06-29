@@ -17,20 +17,56 @@ if (REDIS_URL && REDIS_TOKEN) {
   redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
 }
 
+const TODAY = () => {
+  const t = new Date();
+  return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+};
+function prune(list) { const today = TODAY(); return (list || []).filter(a => a && a.date >= today); }
+
+// Model: salon:data = { appointments, photoVers{key:ts} } — sitno, podesno za čest polling.
+// Svaka slika je u salon:photo:<key>. Lokalno: data.json drži sve.
 async function load() {
   if (redis) {
-    const d = await redis.get("salon:data");
-    return d || { appointments: [], photos: {} };
+    let d = await redis.get("salon:data") || { appointments: [], photoVers: {} };
+    let dirty = false;
+    if (d.photos) { // migracija: premesti inline slike u zasebne ključeve
+      d.photoVers = d.photoVers || {};
+      for (const [k, v] of Object.entries(d.photos)) {
+        await redis.set("salon:photo:" + k, v);
+        d.photoVers[k] = d.photoVers[k] || 1;
+      }
+      delete d.photos; dirty = true;
+    }
+    const before = (d.appointments || []).length;
+    d.appointments = prune(d.appointments);
+    if (d.appointments.length !== before) dirty = true;
+    if (!d.photoVers) { d.photoVers = {}; dirty = true; }
+    if (dirty) await redis.set("salon:data", { appointments: d.appointments, photoVers: d.photoVers });
+    return d;
   }
-  try { return JSON.parse(fs.readFileSync(DB, "utf8")); } catch {
-    // /tmp prazan pri cold startu — učitaj seed iz bundlovanog data.json
-    try { return JSON.parse(fs.readFileSync(SEED, "utf8")); } catch { return { appointments: [], photos: {} }; }
-  }
+  let d;
+  try { d = JSON.parse(fs.readFileSync(DB, "utf8")); }
+  catch { try { d = JSON.parse(fs.readFileSync(SEED, "utf8")); } catch { d = { appointments: [], photos: {} }; } }
+  d.appointments = prune(d.appointments);
+  d.photos = d.photos || {};
+  if (!d.photoVers) { d.photoVers = {}; for (const k of Object.keys(d.photos)) d.photoVers[k] = 1; }
+  return d;
 }
 
 async function save(d) {
-  if (redis) { await redis.set("salon:data", d); return; }
-  fs.writeFileSync(DB, JSON.stringify(d, null, 2));
+  if (redis) { await redis.set("salon:data", { appointments: d.appointments || [], photoVers: d.photoVers || {} }); return; }
+  fs.writeFileSync(DB, JSON.stringify({ appointments: d.appointments || [], photos: d.photos || {}, photoVers: d.photoVers || {} }, null, 2));
+}
+
+async function getPhoto(key) {
+  if (redis) return (await redis.get("salon:photo:" + key)) || null;
+  const d = await load(); return (d.photos || {})[key] || null;
+}
+function setPhoto(d, key, dataUrl) {
+  d.photoVers = d.photoVers || {};
+  d.photoVers[key] = Date.now();
+  if (redis) return redis.set("salon:photo:" + key, dataUrl);
+  d.photos = d.photos || {}; d.photos[key] = dataUrl;
 }
 
 const clients = [];
@@ -53,7 +89,9 @@ async function handler(req, res) {
 
   if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,DELETE", "Access-Control-Allow-Headers": "Content-Type" }); return res.end(); }
 
-  if (p === "/api/state" && req.method === "GET") return json(res, 200, await load());
+  if (p === "/api/state" && req.method === "GET") { const d = await load(); return json(res, 200, { appointments: d.appointments || [], photoVers: d.photoVers || {} }); }
+
+  if (p === "/api/photo" && req.method === "GET") return json(res, 200, { dataUrl: await getPhoto(u.searchParams.get("key") || "") });
 
   if (p === "/api/stream") {
     // SSE ne radi na Vercel serverless — klijent koristi polling
@@ -92,7 +130,7 @@ async function handler(req, res) {
   if (p === "/api/photos" && req.method === "POST") {
     const data = await load();
     const { name, phone, dataUrl } = await body(req);
-    data.photos[clientKey(name, phone)] = dataUrl; await save(data); broadcast();
+    await setPhoto(data, clientKey(name, phone), dataUrl); await save(data); broadcast();
     return json(res, 200, { ok: true });
   }
 
@@ -106,12 +144,14 @@ async function handler(req, res) {
         { id: "d2", date: today, time: at(70), barberId: "b1", serviceId: "s1", name: "Andre Wilson", phone: "3125550149", greeted: false, createdAt: Date.now() },
         { id: "d3", date: today, time: at(130), barberId: "b1", serviceId: "s2", name: "Devin Brooks", phone: "3125550137", greeted: false, createdAt: Date.now() }
       ],
-      photos: {
-        "james carter|3125550141": "img/demo-client.png",
-        "andre wilson|3125550149": "img/demo-client2.png",
-        "devin brooks|3125550137": "img/demo-client3.png"
-      }
+      photoVers: {}, photos: {}
     };
+    const demoPhotos = {
+      "james carter|3125550141": "img/demo-client.png",
+      "andre wilson|3125550149": "img/demo-client2.png",
+      "devin brooks|3125550137": "img/demo-client3.png"
+    };
+    for (const [k, v] of Object.entries(demoPhotos)) await setPhoto(data, k, v);
     await save(data); broadcast();
     return json(res, 200, { ok: true });
   }

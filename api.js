@@ -1,6 +1,7 @@
 // Salon App — API klijent (live preko SSE). Drži keš stanja; stranice se re-renderuju na promenu.
 const _state = { appointments: [], photos: {} };
 const _subs = [];
+const _vers = {};       // keširane verzije slika
 let _lastHash = '';
 
 function loadAppts() { return _state.appointments; }
@@ -12,11 +13,21 @@ async function _refresh() {
   try {
     const r = await fetch("/api/state");
     const s = await r.json();
-    const hash = JSON.stringify(s.appointments.map(a=>({id:a.id,greeted:a.greeted}))) + Object.keys(s.photos).sort().join(',');
+    const pv = s.photoVers || {};
+    const hash = JSON.stringify((s.appointments || []).map(a => ({ id: a.id, greeted: a.greeted })))
+      + '|' + Object.keys(pv).sort().map(k => k + ':' + pv[k]).join(',');
     if (hash === _lastHash) return;
     _lastHash = hash;
     _state.appointments = s.appointments || [];
-    _state.photos = s.photos || {};
+    // dovuci samo slike koje su nove ili izmenjene — ne ceo blob na svaki poll
+    const missing = Object.keys(pv).filter(k => _vers[k] !== pv[k]);
+    if (missing.length) await Promise.all(missing.map(async k => {
+      try {
+        const pr = await fetch("/api/photo?key=" + encodeURIComponent(k));
+        const pj = await pr.json();
+        if (pj.dataUrl) { _state.photos[k] = pj.dataUrl; _vers[k] = pv[k]; }
+      } catch (e) {}
+    }));
     _emit();
   } catch (e) { /* offline */ }
 }
@@ -49,10 +60,13 @@ function freeSlots(dateStr, barberId) {
   return out;
 }
 
-// live: polling uvek, SSE bonus kad radi lokalno
+// live: polling kad je tab vidljiv (štedi Upstash zahteve), SSE bonus kad radi lokalno.
+// TV može postaviti window.POLL_MS pre učitavanja api.js za brži interval.
 (function initLive() {
+  const POLL = (typeof window !== 'undefined' && window.POLL_MS) || 5000;
   _refresh();
-  setInterval(_refresh, 5000);
+  setInterval(() => { if (!document.hidden) _refresh(); }, POLL);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) _refresh(); });
   try {
     const es = new EventSource("/api/stream");
     es.onmessage = () => _refresh();
