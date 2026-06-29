@@ -79,7 +79,8 @@
   .right{grid-area:right;display:flex;flex-direction:column;gap:22px;min-height:0}
   .promo{flex:1;min-height:230px;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
     background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
-  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s;transform:scale(1.04)}
+  /* --- Promo: base (no photo) --- */
+  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .6s}
   .np-bg.on{opacity:1}
   .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.08) 0%,rgba(10,10,12,0) 20%,rgba(10,10,12,.5) 55%,rgba(8,8,10,.97) 100%)}
   .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.16)}
@@ -95,6 +96,15 @@
     text-shadow:0 2px 8px rgba(0,0,0,1),0 8px 32px rgba(0,0,0,.9)}
   .np-meta{font-size:23px;font-weight:700;color:rgba(255,255,255,.95);margin-top:8px;
     text-shadow:0 2px 14px rgba(0,0,0,.98)}
+  /* --- Promo: split layout when photo present --- */
+  /* Photo fills right 55%, face visible at center; text floats left */
+  .promo.split .np-bg{left:auto;width:55%;background-position:center 15%;transform:none;border-radius:0 24px 24px 0}
+  .promo.split .np-grad{
+    background:linear-gradient(90deg,rgba(8,8,10,1) 0%,rgba(8,8,10,.96) 25%,rgba(8,8,10,.6) 50%,rgba(8,8,10,0) 72%)}
+  .promo.split .np-body{left:30px;right:48%;top:50%;bottom:auto;transform:translateY(-50%)}
+  .promo.split .np-name{font-size:clamp(28px,3.2vw,46px);word-break:break-word}
+  .promo.split .np-meta{font-size:20px}
+  .promo.split .np-empty{display:none!important}
   /* TV schedule slide */
   .np-sched{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
     padding:80px 30px 30px;gap:0;z-index:3;background:rgba(10,10,14,.55)}
@@ -397,7 +407,9 @@ function applySlide(slide){
   sched.style.display='none'; body.style.display='block';
   $('#npCounter').textContent=_slides.length>1?`${_slideIdx+1} / ${_slides.length}`:'';
 
+  const card=$('#nextCard');
   if(slide.type==='empty'){
+    card.classList.remove('split');
     $('#npLabel').innerHTML='<span class="dot"></span>ČEKA SE';
     $('#npKicker').textContent=''; $('#npName').textContent='—'; $('#npMeta').textContent='Nema termina za sada';
     bg.classList.remove('on'); empty.style.display='flex';
@@ -405,6 +417,7 @@ function applySlide(slide){
   }
 
   if(slide.type==='tv'){
+    card.classList.remove('split');
     $('#npLabel').innerHTML='<span class="dot"></span>DANAS';
     bg.classList.remove('on'); empty.style.display='none'; body.style.display='none';
     sched.style.display='flex';
@@ -432,8 +445,8 @@ function applySlide(slide){
   }
   $('#npName').textContent=a.name;
   $('#npMeta').textContent=`${a.time} · ${s}`;
-  if(photo){ bg.style.backgroundImage=`url('${photo}')`; bg.classList.add('on'); empty.style.display='none'; }
-  else { bg.classList.remove('on'); empty.style.display='flex'; }
+  if(photo){ bg.style.backgroundImage=`url('${photo}')`; bg.classList.add('on'); empty.style.display='none'; card.classList.add('split'); }
+  else { bg.classList.remove('on'); empty.style.display='flex'; card.classList.remove('split'); }
 }
 
 function buildSlides(current,next,upcoming){
