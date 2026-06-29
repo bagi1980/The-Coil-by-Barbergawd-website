@@ -76,7 +76,7 @@
 
   /* ── right: next-client promo + music ──── */
   .right{grid-area:right;display:flex;flex-direction:column;gap:22px;min-height:0}
-  .promo{flex:1;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
+  .promo{flex:1;min-height:230px;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
     background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
   .np-bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s;transform:scale(1.04)}
   .np-bg.on{opacity:1}
@@ -91,7 +91,20 @@
   .np-kicker{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--cream);opacity:.85;margin-bottom:4px}
   .np-name{font-family:var(--display);font-weight:600;font-size:54px;line-height:1;letter-spacing:.5px;text-shadow:0 3px 20px rgba(0,0,0,.8)}
   .np-meta{font-size:23px;font-weight:600;color:#e8e2d4;margin-top:8px;text-shadow:0 2px 14px rgba(0,0,0,.8)}
-  .music{height:184px;border-radius:24px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--ink)}
+  .schedwrap{border:1px solid var(--line);border-radius:20px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:15px 18px}
+  .sched-h{font-family:var(--display);font-weight:600;letter-spacing:3px;font-size:14px;color:var(--mut);text-transform:uppercase;margin-bottom:12px}
+  .sched{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px}
+  .sl{border-radius:13px;padding:11px 6px;text-align:center;border:1px solid var(--line)}
+  .sl .slt{display:block;font-family:var(--display);font-weight:600;font-size:21px;font-variant-numeric:tabular-nums;line-height:1}
+  .sl .sln{display:block;font-size:12px;font-weight:700;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sl.free .slt{color:var(--cream)}
+  .sl.free .sln{color:var(--blue2);letter-spacing:.5px}
+  .sl.taken{background:rgba(255,255,255,.035)}                /* gray-out zauzeto */
+  .sl.taken .slt,.sl.taken .sln{color:var(--mut)}
+  .sl.now{background:linear-gradient(160deg,rgba(200,16,46,.22),var(--glass2));border-color:rgba(230,57,80,.55)}
+  .sl.now .slt{color:var(--red2)}
+  .sl.now .sln{color:var(--cream);font-family:var(--display);letter-spacing:2px}
+  .music{height:168px;border-radius:24px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--ink)}
   .music iframe{width:100%;height:100%;border:0}
   .music .ml{position:absolute;top:14px;left:16px;z-index:3;display:flex;align-items:center;gap:8px;
     background:rgba(10,10,12,.72);font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:3px;color:var(--cream);
@@ -200,6 +213,10 @@
         <div class="np-name" id="npName">—</div>
         <div class="np-meta" id="npMeta"></div>
       </div>
+    </div>
+    <div class="schedwrap" id="schedWrap">
+      <div class="sched-h" id="schedTitle">Raspored</div>
+      <div class="sched" id="sched"></div>
     </div>
     <div class="music">
       <div class="ml">
@@ -329,6 +346,35 @@ function renderQueue(){
     $('#npName').textContent='—'; $('#npMeta').textContent='Nema termina';
     $('#npBg').classList.remove('on'); $('#npEmpty').style.display='flex';
   }
+
+  // raspored frizera sledećeg klijenta (zauzeti termini = gray-out, na po pola sata)
+  renderSchedule(next?next.barberId:null, next?next.time:null);
+}
+
+// Raspored jednog frizera: sledećih ~6 slotova na pola sata; zauzeti gray-out, slobodni istaknuti
+function renderSchedule(barberId, nowTime){
+  const wrap=$('#schedWrap');
+  if(!barberId){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const byTime={};
+  loadAppts().filter(a=>a.date===todayStr() && a.barberId===barberId).forEach(a=>byTime[a.time]=a);
+  const curHourStart=new Date().toTimeString().slice(0,2)+':00';
+  const slots=[];
+  for(let h=SALON.hours.open;h<SALON.hours.close;h++)
+    for(let m=0;m<60;m+=SALON.slotMin){
+      const t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+      if(t>=curHourStart) slots.push(t);
+    }
+  $('#schedTitle').textContent='Raspored · '+(barberById(barberId)?.name||'');
+  $('#sched').innerHTML = slots.slice(0,5).map(t=>{
+    const a=byTime[t];
+    if(a){
+      const first=(a.name||'').split(' ')[0]||a.name;
+      const isNow = t===nowTime;
+      return `<div class="sl ${isNow?'now':'taken'}"><span class="slt">${t}</span><span class="sln">${isNow?'SAD':first}</span></div>`;
+    }
+    return `<div class="sl free"><span class="slt">${t}</span><span class="sln">slobodno</span></div>`;
+  }).join('');
 }
 
 // WELCOME logic — više klijenata u istom slotu (dva majstora) se SMENJUJU na 10s

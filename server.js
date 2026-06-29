@@ -99,7 +99,7 @@ async function handler(req, res) {
   if (p === "/api/demo" && req.method === "POST") {
     const t = new Date();
     const today = t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
-    const at = (min) => { const d = new Date(Date.now() + min * 60000); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+    const at = (min) => { const d = new Date(Date.now() + min * 60000); d.setMinutes(Math.round(d.getMinutes() / 30) * 30, 0, 0); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
     const data = {
       appointments: [
         { id: "d1", date: today, time: at(10), barberId: "b1", serviceId: "s4", name: "James Carter", phone: "3125550141", greeted: false, createdAt: Date.now() },
