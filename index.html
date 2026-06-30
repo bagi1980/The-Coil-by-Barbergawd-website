@@ -246,7 +246,7 @@ async function adminLogin(){
 }
 $('#adminLoginBtn').onclick=adminLogin;
 $('#adminPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
-$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); $('#admin').style.display='none'; document.querySelector('.tab[data-tab="book"]')?.click(); };
+$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); $('#admin').style.display='none'; document.querySelector('.tab[data-tab="book"]')?.click(); window.scrollTo(0,0); };
 
 // services
 $('#services').innerHTML = SERVICES.map(s=>
