@@ -208,6 +208,25 @@ async function handler(req, res) {
     fileSave(d); broadcast(); return json(res, 200, { ok: true });
   }
 
+  // ── /api/client DELETE (GDPR pravo na zaborav) ──
+  if (p === "/api/client" && req.method === "DELETE") {
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    const { name, phone } = await body(req);
+    if (!phone || !phone.trim()) return json(res, 400, { error: "Telefon je obavezan." });
+    const ph = phone.trim();
+    const key = clientKey(name, phone);
+    if (supabase) {
+      await supabase.from("appointments").delete().eq("phone", ph);
+      await supabase.from("photos").delete().like("client_key", "%|" + ph);
+      broadcast(); return json(res, 200, { ok: true });
+    }
+    const d = fileLoad();
+    d.appointments = (d.appointments || []).filter(a => (a.phone || "").trim() !== ph);
+    for (const k of Object.keys(d.photos || {})) if (k.endsWith("|" + ph)) { delete d.photos[k]; if (d.photoVers) delete d.photoVers[k]; if (d.consents) delete d.consents[k]; }
+    if (d.photos && d.photos[key]) { delete d.photos[key]; if (d.photoVers) delete d.photoVers[key]; if (d.consents) delete d.consents[key]; }
+    fileSave(d); broadcast(); return json(res, 200, { ok: true });
+  }
+
   // ── /api/appointments/greet POST ──
   if (p === "/api/appointments/greet" && req.method === "POST") {
     const { id } = await body(req);

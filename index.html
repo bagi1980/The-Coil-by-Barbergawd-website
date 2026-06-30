@@ -172,6 +172,16 @@
     </label>
     <button class="btn ghost" id="savePhoto" style="margin-top:10px">Sačuvaj fotku</button>
     <div id="pResult" class="muted"></div>
+
+    <div class="section" data-n="•">Obriši podatke klijenta (GDPR)</div>
+    <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">
+      Trajno briše <b style="color:var(--cream)">sve termine i fotografiju</b> klijenta (na svim datumima) — „pravo na zaborav".
+      Akcija se ne može poništiti. Brisanje ide po broju telefona.
+    </div>
+    <div class="row"><input id="delName" placeholder="Ime klijenta (opciono)"></div>
+    <div class="row" style="margin-top:10px"><input id="delPhone" placeholder="Telefon klijenta (obavezno)"></div>
+    <button class="btn ghost" id="delClientBtn" style="margin-top:10px;border-color:rgba(230,57,80,.5);color:var(--red2)">Obriši sve podatke klijenta</button>
+    <div id="delResult" class="muted"></div>
   </div>
 
   <!-- BREAKS (in admin, rendered by JS) -->
@@ -338,6 +348,16 @@ $('#savePhoto').onclick = ()=>{
     $('#pResult').textContent = resp.ok ? '✓ Fotka sačuvana — pojaviće se na TV-u pri sledećoj poseti.' : 'Greška pri čuvanju fotke.';
     if(resp.ok) $('#pConsent').checked=false;
   }; r.readAsDataURL(f);
+};
+
+// ── Obriši podatke klijenta (GDPR pravo na zaborav) ──
+$('#delClientBtn').onclick = async ()=>{
+  const name=$('#delName').value.trim(), phone=$('#delPhone').value.trim();
+  if(!phone){ $('#delResult').textContent='Unesi telefon klijenta.'; return; }
+  if(!confirm(`Trajno obrisati SVE podatke (termine + fotografiju) za ${name||phone}?\n\nOvo se NE MOŽE poništiti.`)) return;
+  const r=await fetch('/api/client',{method:'DELETE',headers:adminHeaders({'Content-Type':'application/json'}),body:JSON.stringify({name,phone})});
+  if(r.ok){ $('#delResult').textContent=`✓ Svi podaci za ${name||phone} su trajno obrisani.`; $('#delName').value=''; $('#delPhone').value=''; renderToday(); }
+  else { const e=await r.json().catch(()=>({})); $('#delResult').textContent='Greška: '+(e.error||'brisanje nije uspelo.'); }
 };
 
 // ── Procena čekanja ──
