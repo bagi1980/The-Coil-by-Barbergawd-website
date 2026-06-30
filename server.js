@@ -174,7 +174,8 @@ async function handler(req, res) {
       hasUrl: !!process.env.SUPABASE_URL,
       urlPreview: (process.env.SUPABASE_URL || "").slice(0, 40),
       hasKey: !!process.env.SUPABASE_ANON_KEY,
-      test: testResult
+      test: testResult,
+      rawTest
     });
   }
 
