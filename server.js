@@ -61,7 +61,10 @@ async function sbLoad() {
 
 // --- Supabase: upsert appointment ---
 async function sbAddAppt(a) {
-  const { data, error } = await supabase.from("appointments").insert(apptToRow(a)).select().single();
+  const row = apptToRow(a);
+  console.log("INSERT row:", JSON.stringify(row));
+  const { data, error } = await supabase.from("appointments").insert(row).select().single();
+  console.log("INSERT result data:", JSON.stringify(data), "error:", error?.message);
   if (error) throw error;
   return apptFromRow(data);
 }
