@@ -162,10 +162,16 @@ async function handler(req, res) {
       return json(res, 400, { error: "Nedeljom ne radimo." });
     a.id = "a" + Date.now() + Math.floor(Math.random() * 1000);
     a.createdAt = Date.now(); a.greeted = false;
+    console.log("supabase active:", !!supabase, "SUPABASE_URL:", !!process.env.SUPABASE_URL);
     if (supabase) {
-      const saved = await sbAddAppt(a);
-      broadcast();
-      return json(res, 200, saved);
+      try {
+        const saved = await sbAddAppt(a);
+        broadcast();
+        return json(res, 200, saved);
+      } catch(e) {
+        console.error("Supabase error:", e.message, e);
+        return json(res, 500, { error: e.message });
+      }
     }
     const d = fileLoad(); d.appointments.push(a); fileSave(d); broadcast();
     return json(res, 200, a);
