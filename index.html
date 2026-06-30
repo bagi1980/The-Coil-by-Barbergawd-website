@@ -98,9 +98,23 @@
     </div>
   </div>
 
+  <!-- ADMIN GATE -->
+  <div id="adminGate" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,12,18,.92);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+    <div style="background:#15171f;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:26px 22px;width:min(360px,90vw);text-align:center">
+      <div style="font-family:var(--display,sans-serif);font-size:22px;font-weight:700;color:var(--cream,#fff);letter-spacing:1px;margin-bottom:6px">ADMIN PRISTUP</div>
+      <div class="muted" style="font-size:13px;margin-bottom:16px">Unesi lozinku za pristup admin panelu.</div>
+      <input id="adminPassInput" type="password" placeholder="Lozinka" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:6px">
+      <div id="adminGateErr" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
+      <button class="btn" id="adminLoginBtn" style="width:100%">Uđi</button>
+    </div>
+  </div>
+
   <!-- ADMIN -->
   <div id="admin" style="display:none">
-    <button class="btn ghost" id="loadDemo">↻ Učitaj demo (reset za prezentaciju)</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="loadDemo" style="flex:1">↻ Učitaj demo (reset za prezentaciju)</button>
+      <button class="btn ghost" id="adminLogout">Odjavi se</button>
+    </div>
     <div class="section" data-n="•">Dodaj termin</div>
     <div class="chips" id="aServices"></div>
     <div class="chips" id="aBarbers" style="margin-top:10px"></div>
@@ -148,7 +162,11 @@
     <div class="row"><input id="pName" placeholder="Ime klijenta (kao kod zakazivanja)"></div>
     <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Telefon klijenta"></div>
     <input type="file" id="pFile" accept="image/*" style="margin-top:10px">
-    <button class="btn ghost" id="savePhoto">Sačuvaj fotku</button>
+    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;margin-top:12px;font-size:13px;color:var(--cream,#fff);cursor:pointer">
+      <input type="checkbox" id="pConsent" style="margin-top:2px;flex-shrink:0">
+      <span>Klijent je dao saglasnost za čuvanje i prikaz fotografije (GDPR).</span>
+    </label>
+    <button class="btn ghost" id="savePhoto" style="margin-top:10px">Sačuvaj fotku</button>
     <div id="pResult" class="muted"></div>
   </div>
 
@@ -191,10 +209,30 @@ document.querySelectorAll('.tab[data-tab]').forEach(t=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
     t.classList.add('sel');
     $('#book').style.display = t.dataset.tab==='book'?'block':'none';
-    $('#admin').style.display = t.dataset.tab==='admin'?'block':'none';
-    if(t.dataset.tab==='admin'){ renderToday(); aRefreshSlots(); renderBreaks(); }
+    if(t.dataset.tab==='admin'){
+      if(isAdminAuthed()){ $('#admin').style.display='block'; renderToday(); aRefreshSlots(); renderBreaks(); }
+      else { $('#admin').style.display='none'; openAdminGate(); }
+    } else {
+      $('#admin').style.display='none';
+    }
   };
 });
+
+// ── Admin login gate ──
+function isAdminAuthed(){ return !!localStorage.getItem('adminPass'); }
+function openAdminGate(){ $('#adminGate').style.display='flex'; $('#adminPassInput').value=''; $('#adminGateErr').textContent=''; setTimeout(()=>$('#adminPassInput').focus(),50); }
+function closeAdminGate(){ $('#adminGate').style.display='none'; }
+async function adminLogin(){
+  const pass=$('#adminPassInput').value;
+  try{
+    const r=await fetch('/api/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
+    if(r.ok){ localStorage.setItem('adminPass',pass); closeAdminGate(); $('#admin').style.display='block'; renderToday(); aRefreshSlots(); renderBreaks(); }
+    else { $('#adminGateErr').textContent='Pogrešna lozinka.'; }
+  }catch(e){ $('#adminGateErr').textContent='Greška u konekciji.'; }
+}
+$('#adminLoginBtn').onclick=adminLogin;
+$('#adminPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
+$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); $('#admin').style.display='none'; document.querySelector('.tab[data-tab="book"]')?.click(); };
 
 // services
 $('#services').innerHTML = SERVICES.map(s=>
@@ -265,7 +303,7 @@ function renderToday(){
       <span class="x" onclick="removeAppt('${a.id}')">Obriši</span></div>`;
   }).join('') : '<div class="muted">Nema termina za danas.</div>';
 }
-$('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST'}); renderToday(); };
+$('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST',headers:adminHeaders()}); renderToday(); };
 
 // klik na ＋ / fotku pored klijenta → upload fotke za tog klijenta
 let pendingClient=null;
@@ -278,18 +316,24 @@ $('#todayList').addEventListener('click', e=>{
 });
 $('#rowFile').onchange = ()=>{
   const f=$('#rowFile').files[0]; if(!f||!pendingClient) return;
+  const consent = confirm(`Da li je klijent (${pendingClient.name}) dao saglasnost za čuvanje i prikaz fotografije? (GDPR)`);
+  if(!consent){ $('#rowResult').textContent='Fotka nije sačuvana — nema saglasnosti klijenta.'; pendingClient=null; return; }
   const r=new FileReader();
   r.onload=async ()=>{
-    await savePhoto(pendingClient.name, pendingClient.phone, r.result);
-    $('#rowResult').textContent=`✓ Fotka sačuvana za ${pendingClient.name} — pojaviće se na TV-u.`;
+    const resp=await savePhoto(pendingClient.name, pendingClient.phone, r.result, true);
+    $('#rowResult').textContent = resp.ok ? `✓ Fotka sačuvana za ${pendingClient.name} — pojaviće se na TV-u.` : 'Greška pri čuvanju fotke.';
     pendingClient=null; renderToday();
   };
   r.readAsDataURL(f);
 };
 $('#savePhoto').onclick = ()=>{
   const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Unesi ime i izaberi fotku.'; return; }
-  const r=new FileReader(); r.onload=()=>{ savePhoto($('#pName').value, $('#pPhone').value, r.result);
-    $('#pResult').textContent='✓ Fotka sačuvana — pojaviće se na TV-u pri sledećoj poseti.'; }; r.readAsDataURL(f);
+  if(!$('#pConsent').checked){ $('#pResult').textContent='Potvrdi saglasnost klijenta pre čuvanja fotke.'; return; }
+  const r=new FileReader(); r.onload=async ()=>{
+    const resp=await savePhoto($('#pName').value, $('#pPhone').value, r.result, true);
+    $('#pResult').textContent = resp.ok ? '✓ Fotka sačuvana — pojaviće se na TV-u pri sledećoj poseti.' : 'Greška pri čuvanju fotke.';
+    if(resp.ok) $('#pConsent').checked=false;
+  }; r.readAsDataURL(f);
 };
 
 // ── Procena čekanja ──

@@ -22,10 +22,16 @@ create table if not exists breaks (
 );
 
 create table if not exists photos (
-  client_key  text primary key,
-  data_url    text,
-  version     bigint
+  client_key   text primary key,
+  data_url     text,
+  version      bigint,
+  consent      boolean default false,
+  consent_date bigint
 );
+
+-- Ako tabela photos već postoji bez consent kolona, pokreni ovo:
+alter table photos add column if not exists consent boolean default false;
+alter table photos add column if not exists consent_date bigint;
 
 -- Indeksi za brže upite
 create index if not exists appointments_date_idx on appointments(date);

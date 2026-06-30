@@ -9,6 +9,12 @@ const SEED = path.join(ROOT, "data.json");
 
 // --- Supabase klijent ---
 let supabase = null;
+// --- Admin auth ---
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+if (!process.env.ADMIN_PASSWORD)
+  console.warn("UPOZORENJE: ADMIN_PASSWORD nije postavljen — koristi se podrazumevana '1234'. Postavi env var u produkciji!");
+function isAdmin(req) { return (req.headers["x-admin-pass"] || "") === ADMIN_PASSWORD; }
+
 const supaKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 const supaUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
 if (supaUrl && supaKey) {
@@ -90,8 +96,10 @@ async function sbGetPhoto(key) {
   return data ? data.data_url : null;
 }
 
-async function sbSetPhoto(key, dataUrl) {
-  await supabase.from("photos").upsert({ client_key: key, data_url: dataUrl, version: Date.now() });
+async function sbSetPhoto(key, dataUrl, consent) {
+  const row = { client_key: key, data_url: dataUrl, version: Date.now() };
+  if (consent !== undefined) { row.consent = !!consent; row.consent_date = consent ? Date.now() : null; }
+  await supabase.from("photos").upsert(row);
 }
 
 // --- Supabase: demo reset ---
@@ -113,12 +121,13 @@ function fileLoad() {
   d.appointments = (d.appointments || []).filter(a => a && a.date >= today);
   d.breaks = (d.breaks || []).filter(b => b && b.date >= today);
   d.photos = d.photos || {};
+  d.consents = d.consents || {};
   if (!d.photoVers) { d.photoVers = {}; for (const k of Object.keys(d.photos)) d.photoVers[k] = 1; }
   return d;
 }
 function fileSave(d) {
   fs.writeFileSync(DB, JSON.stringify({ appointments: d.appointments || [], photos: d.photos || {},
-    photoVers: d.photoVers || {}, breaks: d.breaks || [] }, null, 2));
+    photoVers: d.photoVers || {}, breaks: d.breaks || [], consents: d.consents || {} }, null, 2));
 }
 function clientKey(name, phone) { return (name || "").trim().toLowerCase() + "|" + (phone || "").trim(); }
 
@@ -152,6 +161,13 @@ async function handler(req, res) {
   }
 
   // ── /api/state ──
+  // ── /api/admin-login POST ──
+  if (p === "/api/admin-login" && req.method === "POST") {
+    const { password } = await body(req);
+    const ok = password === ADMIN_PASSWORD;
+    return json(res, ok ? 200 : 401, { ok });
+  }
+
   if (p === "/api/state" && req.method === "GET") {
     if (supabase) {
       const d = await sbLoad();
@@ -185,6 +201,7 @@ async function handler(req, res) {
 
   // ── /api/appointments/:id DELETE ──
   if (p.startsWith("/api/appointments/") && req.method === "DELETE") {
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
     const id = p.split("/").pop();
     if (supabase) { await sbRemoveAppt(id); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad(); d.appointments = d.appointments.filter(x => x.id !== id);
@@ -202,6 +219,7 @@ async function handler(req, res) {
 
   // ── /api/breaks POST ──
   if (p === "/api/breaks" && req.method === "POST") {
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
     const b = await body(req);
     b.id = "br" + Date.now();
     if (supabase) { const saved = await sbAddBreak(b); broadcast(); return json(res, 200, saved); }
@@ -211,6 +229,7 @@ async function handler(req, res) {
 
   // ── /api/breaks/:id DELETE ──
   if (p.startsWith("/api/breaks/") && req.method === "DELETE") {
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
     const id = p.split("/").pop();
     if (supabase) { await sbRemoveBreak(id); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad(); d.breaks = (d.breaks || []).filter(x => x.id !== id);
@@ -226,12 +245,15 @@ async function handler(req, res) {
 
   // ── /api/photos POST ──
   if (p === "/api/photos" && req.method === "POST") {
-    const { name, phone, dataUrl } = await body(req);
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    const { name, phone, dataUrl, consent } = await body(req);
+    if (!consent) return json(res, 400, { error: "Nedostaje saglasnost klijenta za čuvanje fotografije." });
     const key = clientKey(name, phone);
-    if (supabase) { await sbSetPhoto(key, dataUrl); broadcast(); return json(res, 200, { ok: true }); }
+    if (supabase) { await sbSetPhoto(key, dataUrl, consent); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad();
     d.photos = d.photos || {}; d.photos[key] = dataUrl;
     d.photoVers = d.photoVers || {}; d.photoVers[key] = Date.now();
+    d.consents = d.consents || {}; d.consents[key] = { consent: true, date: Date.now() };
     fileSave(d); broadcast(); return json(res, 200, { ok: true });
   }
 
@@ -248,6 +270,7 @@ async function handler(req, res) {
 
   // ── /api/demo POST ──
   if (p === "/api/demo" && req.method === "POST") {
+    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
     const today = TODAY();
     const at = min => {
       const d = new Date(Date.now() + min * 60000);

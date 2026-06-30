@@ -1,59 +1,15 @@
 {
   "appointments": [
     {
-      "id": "d1",
-      "date": "2026-06-29",
-      "time": "17:30",
-      "barberId": "b1",
-      "serviceId": "s4",
-      "name": "James Carter",
-      "phone": "3125550141",
-      "greeted": true,
-      "createdAt": 1782746583596
-    },
-    {
-      "id": "d2",
-      "date": "2026-06-29",
-      "time": "18:30",
+      "date": "2026-07-01",
+      "time": "10:00",
       "barberId": "b1",
       "serviceId": "s1",
-      "name": "Andre Wilson",
-      "phone": "3125550149",
-      "greeted": true,
-      "createdAt": 1782746583596
-    },
-    {
-      "id": "d3",
-      "date": "2026-06-29",
-      "time": "19:30",
-      "barberId": "b1",
-      "serviceId": "s2",
-      "name": "Devin Brooks",
-      "phone": "3125550137",
-      "greeted": true,
-      "createdAt": 1782746583596
-    },
-    {
-      "date": "2026-06-29",
-      "time": "20:00",
-      "barberId": "b2",
-      "serviceId": "s2",
-      "name": "Novak Djokovic",
-      "phone": "40693030445",
-      "id": "a178274861442382",
-      "createdAt": 1782748614423,
-      "greeted": true
-    },
-    {
-      "date": "2026-06-29",
-      "time": "19:00",
-      "barberId": "b1",
-      "serviceId": "s1",
-      "name": "Pera Perić",
-      "phone": "walk-in",
-      "id": "a1782751302292223",
-      "createdAt": 1782751302292,
-      "greeted": true
+      "name": "Public Test",
+      "phone": "555",
+      "id": "a1782826907947957",
+      "createdAt": 1782826907947,
+      "greeted": false
     }
   ],
   "photos": {
@@ -68,13 +24,6 @@
     "devin brooks|3125550137": 1782746583597,
     "novak djokovic|40693030445": 1782748623631
   },
-  "breaks": [
-    {
-      "barberId": "b1",
-      "date": "2026-06-29",
-      "startTime": "19:00",
-      "endTime": "20:00",
-      "id": "br1782751408785"
-    }
-  ]
+  "breaks": [],
+  "consents": {}
 }

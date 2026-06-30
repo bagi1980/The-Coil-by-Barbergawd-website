@@ -41,13 +41,18 @@ async function addAppt(a) {
   });
   return r.json();   // SSE će osvežiti ostale ekrane
 }
-async function removeAppt(id) {
-  await fetch("/api/appointments/" + id, { method: "DELETE" });
+// admin akcije šalju lozinku iz localStorage kao zaglavlje
+function adminHeaders(extra) {
+  const pass = (typeof localStorage !== 'undefined' && localStorage.getItem('adminPass')) || '';
+  return Object.assign({ 'x-admin-pass': pass }, extra || {});
 }
-async function savePhoto(name, phone, dataUrl) {
-  await fetch("/api/photos", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, phone, dataUrl })
+async function removeAppt(id) {
+  await fetch("/api/appointments/" + id, { method: "DELETE", headers: adminHeaders() });
+}
+async function savePhoto(name, phone, dataUrl, consent) {
+  return fetch("/api/photos", {
+    method: "POST", headers: adminHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ name, phone, dataUrl, consent })
   });
 }
 
@@ -77,13 +82,13 @@ function waitMins(dateStr, slotTime) {
 
 async function addBreak(barberId, date, startTime, endTime) {
   const r = await fetch("/api/breaks", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: adminHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ barberId, date, startTime, endTime })
   });
   return r.json();
 }
 async function removeBreak(id) {
-  await fetch("/api/breaks/" + id, { method: "DELETE" });
+  await fetch("/api/breaks/" + id, { method: "DELETE", headers: adminHeaders() });
 }
 
 // live: polling kad je tab vidljiv (štedi Upstash zahteve), SSE bonus kad radi lokalno.
