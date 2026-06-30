@@ -160,8 +160,15 @@ async function handler(req, res) {
     let testResult = null;
     if (supabase) {
       const { data, error } = await supabase.from("appointments").select("id").limit(1);
-      testResult = error ? { error: error.message, code: error.code, details: error.details } : { ok: true, rows: data?.length };
+      testResult = error ? { error: error.message, code: error.code, details: error.details, hint: error.hint } : { ok: true, rows: data?.length };
     }
+    // raw REST test
+    let rawTest = null;
+    try {
+      const url = process.env.SUPABASE_URL + "/rest/v1/appointments?select=id&limit=1";
+      const r = await fetch(url, { headers: { "apikey": process.env.SUPABASE_ANON_KEY, "Authorization": "Bearer " + process.env.SUPABASE_ANON_KEY } });
+      rawTest = { status: r.status, body: await r.text() };
+    } catch(e) { rawTest = { error: e.message }; }
     return json(res, 200, {
       supabaseActive: !!supabase,
       hasUrl: !!process.env.SUPABASE_URL,
