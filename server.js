@@ -10,10 +10,11 @@ const SEED = path.join(ROOT, "data.json");
 // --- Supabase klijent ---
 let supabase = null;
 const supaKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-if (process.env.SUPABASE_URL && supaKey) {
+const supaUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+if (supaUrl && supaKey) {
   try {
     const { createClient } = require("@supabase/supabase-js");
-    supabase = createClient(process.env.SUPABASE_URL, supaKey);
+    supabase = createClient(supaUrl, supaKey);
   } catch(e) {
     console.error("Supabase init error:", e.message);
   }
@@ -163,16 +164,17 @@ async function handler(req, res) {
     // raw REST test
     let rawTest = null;
     try {
-      const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-      const root = await fetch(process.env.SUPABASE_URL + "/rest/v1/", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
-      const appt = await fetch(process.env.SUPABASE_URL + "/rest/v1/appointments?select=id&limit=1", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
-      rawTest = { rootStatus: root.status, rootBody: (await root.text()).slice(0, 200), apptStatus: appt.status, apptBody: await appt.text() };
+      const key = supaKey;
+      const appt = await fetch(supaUrl + "/rest/v1/appointments?select=id&limit=1", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
+      rawTest = { apptStatus: appt.status, apptBody: await appt.text() };
     } catch(e) { rawTest = { error: e.message }; }
+    const rawEnv = process.env.SUPABASE_URL || "";
     return json(res, 200, {
       supabaseActive: !!supabase,
-      hasUrl: !!process.env.SUPABASE_URL,
-      urlPreview: (process.env.SUPABASE_URL || "").slice(0, 40),
-      hasKey: !!process.env.SUPABASE_ANON_KEY,
+      rawEnvLen: rawEnv.length,
+      rawEnvLast: JSON.stringify(rawEnv.slice(-5)),
+      cleanUrl: supaUrl,
+      usingServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
       test: testResult,
       rawTest
     });
