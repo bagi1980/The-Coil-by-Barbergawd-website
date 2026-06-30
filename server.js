@@ -152,6 +152,16 @@ async function handler(req, res) {
     return res.end();
   }
 
+  // ── /api/debug ──
+  if (p === "/api/debug" && req.method === "GET") {
+    return json(res, 200, {
+      supabaseActive: !!supabase,
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_ANON_KEY,
+      allSupaKeys: Object.keys(process.env).filter(k => k.includes("SUPA") || k.includes("KV") || k.includes("REDIS"))
+    });
+  }
+
   // ── /api/state ──
   if (p === "/api/state" && req.method === "GET") {
     if (supabase) {
