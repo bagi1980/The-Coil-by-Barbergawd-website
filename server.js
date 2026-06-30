@@ -163,9 +163,10 @@ async function handler(req, res) {
     // raw REST test
     let rawTest = null;
     try {
-      const url = process.env.SUPABASE_URL + "/rest/v1/appointments?select=id&limit=1";
-      const r = await fetch(url, { headers: { "apikey": process.env.SUPABASE_ANON_KEY, "Authorization": "Bearer " + process.env.SUPABASE_ANON_KEY } });
-      rawTest = { status: r.status, body: await r.text() };
+      const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+      const root = await fetch(process.env.SUPABASE_URL + "/rest/v1/", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
+      const appt = await fetch(process.env.SUPABASE_URL + "/rest/v1/appointments?select=id&limit=1", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
+      rawTest = { rootStatus: root.status, rootBody: (await root.text()).slice(0, 200), apptStatus: appt.status, apptBody: await appt.text() };
     } catch(e) { rawTest = { error: e.message }; }
     return json(res, 200, {
       supabaseActive: !!supabase,
