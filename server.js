@@ -60,10 +60,7 @@ async function sbLoad() {
 
 // --- Supabase: upsert appointment ---
 async function sbAddAppt(a) {
-  const row = apptToRow(a);
-  console.log("INSERT row:", JSON.stringify(row));
-  const { data, error } = await supabase.from("appointments").insert(row).select().single();
-  console.log("INSERT result data:", JSON.stringify(data), "error:", error?.message);
+  const { data, error } = await supabase.from("appointments").insert(apptToRow(a)).select().single();
   if (error) throw error;
   return apptFromRow(data);
 }
@@ -152,32 +149,6 @@ async function handler(req, res) {
     res.writeHead(204, { "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,DELETE", "Access-Control-Allow-Headers": "Content-Type" });
     return res.end();
-  }
-
-  // ── /api/debug ──
-  if (p === "/api/debug" && req.method === "GET") {
-    let testResult = null;
-    if (supabase) {
-      const { data, error } = await supabase.from("appointments").select("id").limit(1);
-      testResult = error ? { error: error.message, code: error.code, details: error.details, hint: error.hint } : { ok: true, rows: data?.length };
-    }
-    // raw REST test
-    let rawTest = null;
-    try {
-      const key = supaKey;
-      const appt = await fetch(supaUrl + "/rest/v1/appointments?select=id&limit=1", { headers: { "apikey": key, "Authorization": "Bearer " + key } });
-      rawTest = { apptStatus: appt.status, apptBody: await appt.text() };
-    } catch(e) { rawTest = { error: e.message }; }
-    const rawEnv = process.env.SUPABASE_URL || "";
-    return json(res, 200, {
-      supabaseActive: !!supabase,
-      rawEnvLen: rawEnv.length,
-      rawEnvLast: JSON.stringify(rawEnv.slice(-5)),
-      cleanUrl: supaUrl,
-      usingServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
-      test: testResult,
-      rawTest
-    });
   }
 
   // ── /api/state ──
