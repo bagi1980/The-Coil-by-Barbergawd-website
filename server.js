@@ -157,11 +157,17 @@ async function handler(req, res) {
 
   // ── /api/debug ──
   if (p === "/api/debug" && req.method === "GET") {
+    let testResult = null;
+    if (supabase) {
+      const { data, error } = await supabase.from("appointments").select("id").limit(1);
+      testResult = error ? { error: error.message, code: error.code, details: error.details } : { ok: true, rows: data?.length };
+    }
     return json(res, 200, {
       supabaseActive: !!supabase,
       hasUrl: !!process.env.SUPABASE_URL,
+      urlPreview: (process.env.SUPABASE_URL || "").slice(0, 40),
       hasKey: !!process.env.SUPABASE_ANON_KEY,
-      allSupaKeys: Object.keys(process.env).filter(k => k.includes("SUPA") || k.includes("KV") || k.includes("REDIS"))
+      test: testResult
     });
   }
 
