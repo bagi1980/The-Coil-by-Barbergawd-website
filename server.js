@@ -9,13 +9,11 @@ const SEED = path.join(ROOT, "data.json");
 
 // --- Supabase klijent ---
 let supabase = null;
-console.log("ENV CHECK — SUPABASE_URL:", !!process.env.SUPABASE_URL, "| SUPABASE_ANON_KEY:", !!process.env.SUPABASE_ANON_KEY);
-console.log("All env keys:", Object.keys(process.env).filter(k => k.startsWith("SUPA")).join(", "));
-if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+const supaKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+if (process.env.SUPABASE_URL && supaKey) {
   try {
     const { createClient } = require("@supabase/supabase-js");
-    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-    console.log("Supabase client initialized OK");
+    supabase = createClient(process.env.SUPABASE_URL, supaKey);
   } catch(e) {
     console.error("Supabase init error:", e.message);
   }
