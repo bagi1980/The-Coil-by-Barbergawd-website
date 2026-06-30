@@ -120,15 +120,30 @@
     <input type="file" id="rowFile" accept="image/*" style="display:none">
     <div id="rowResult" class="muted" style="padding:6px 0"></div>
     <div class="section" data-n="•">Pauze frizera</div>
-    <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">Termini tokom pauze se blokiraju u zakazivanju.</div>
-    <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
-      <select id="breakBarber" style="flex:1;min-width:110px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px"></select>
-      <input id="breakDate" type="date" style="flex:1;min-width:120px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px">
-      <input id="breakStart" type="time" value="13:00" style="flex:1;min-width:90px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px">
-      <input id="breakEnd" type="time" value="14:00" style="flex:1;min-width:90px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px">
+    <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">
+      Pauza blokira termine frizera u tom vremenskom periodu — klijenti ne mogu da zakazuju dok je pauza aktivna.
+      Korisno za ručak, odmor ili privatne obaveze.
     </div>
-    <button class="btn ghost" id="addBreakBtn" style="margin-top:10px">＋ Dodaj pauzu</button>
-    <div id="breaksList" style="margin-top:6px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="muted" style="font-size:12px;margin-bottom:4px">Frizer</div>
+        <select id="breakBarber" style="width:100%;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px"></select>
+      </div>
+      <div>
+        <div class="muted" style="font-size:12px;margin-bottom:4px">Datum</div>
+        <input id="breakDate" type="date" style="width:100%;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px;box-sizing:border-box">
+      </div>
+      <div>
+        <div class="muted" style="font-size:12px;margin-bottom:4px">Početak pauze</div>
+        <input id="breakStart" type="time" value="13:00" style="width:100%;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px;box-sizing:border-box">
+      </div>
+      <div>
+        <div class="muted" style="font-size:12px;margin-bottom:4px">Kraj pauze</div>
+        <input id="breakEnd" type="time" value="14:00" style="width:100%;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream);font-size:15px;box-sizing:border-box">
+      </div>
+    </div>
+    <button class="btn ghost" id="addBreakBtn">Sačuvaj pauzu</button>
+    <div id="breaksList" style="margin-top:14px"></div>
     <div class="section" data-n="•">Dodaj fotku sesije (za TV pozdrav + Instagram)</div>
     <div class="row"><input id="pName" placeholder="Ime klijenta (kao kod zakazivanja)"></div>
     <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Telefon klijenta"></div>
@@ -371,7 +386,7 @@ function renderBreaks(){
     return `<div class="item"><div class="t">${b.startTime}–${b.endTime}</div>
       <div><div class="who">${bn}</div><div class="meta">${day}</div></div>
       <span class="x" data-bid="${b.id}">Obriši</span></div>`;
-  }).join(''):'<div class="muted">Nema pauza.</div>';
+  }).join(''):'<div class="muted" style="text-align:left">Nema zakazanih pauza — svi termini su dostupni za zakazivanje.</div>';
 }
 $('#breaksList').addEventListener('click', async e=>{
   const x=e.target.closest('.x'); if(!x) return;
