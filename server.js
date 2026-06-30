@@ -10,7 +10,7 @@ const SEED = path.join(ROOT, "data.json");
 // --- Supabase klijent ---
 let supabase = null;
 const supaKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-const supaUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+const supaUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
 if (supaUrl && supaKey) {
   try {
     const { createClient } = require("@supabase/supabase-js");
