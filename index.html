@@ -109,7 +109,8 @@
       <div class="muted" style="font-size:13px;margin-bottom:16px">Unesi lozinku za pristup admin panelu.</div>
       <input id="adminPassInput" type="password" placeholder="Lozinka" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:6px">
       <div id="adminGateErr" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
-      <button class="btn" id="adminLoginBtn" style="width:100%">Uđi</button>
+      <button class="btn" id="adminLoginBtn" style="width:100%">Prijavi se</button>
+      <button id="adminGateBack" style="margin-top:12px;background:none;border:none;color:var(--mut,#9a958c);font-size:13px;cursor:pointer;text-decoration:underline">← Nazad na zakazivanje</button>
     </div>
   </div>
 
@@ -246,7 +247,8 @@ async function adminLogin(){
 }
 $('#adminLoginBtn').onclick=adminLogin;
 $('#adminPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
-$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); location.replace(location.pathname); };
+$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); $('#admin').style.display='none'; openAdminGate(); };
+$('#adminGateBack').onclick=()=>{ closeAdminGate(); document.querySelector('.tab[data-tab="book"]')?.click(); window.scrollTo(0,0); };
 
 // services
 $('#services').innerHTML = SERVICES.map(s=>
