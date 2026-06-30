@@ -58,7 +58,11 @@
       <input id="name" placeholder="Ime i prezime">
       <input id="phone" placeholder="Telefon">
     </div>
-    <button class="btn" id="submit" disabled>ZAKAŽI TERMIN</button>
+    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;margin-top:14px;font-size:13px;color:var(--cream,#fff);cursor:pointer">
+      <input type="checkbox" id="bookConsent" style="width:18px;height:18px;margin:2px 0 0;flex-shrink:0;accent-color:var(--accent,#e0533d)">
+      <span>Slažem se da se moji podaci (ime i telefon) čuvaju radi zakazivanja termina, u skladu sa <a href="privatnost.html" target="_blank" style="color:var(--accent,#e0533d);text-decoration:underline">Politikom privatnosti</a>.</span>
+    </label>
+    <button class="btn" id="submit" disabled style="margin-top:12px">ZAKAŽI TERMIN</button>
     <div id="result"></div>
 
     <!-- WHY US -->
@@ -163,7 +167,7 @@
     <div class="row" style="margin-top:10px"><input id="pPhone" placeholder="Telefon klijenta"></div>
     <input type="file" id="pFile" accept="image/*" style="margin-top:10px">
     <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;margin-top:12px;font-size:13px;color:var(--cream,#fff);cursor:pointer">
-      <input type="checkbox" id="pConsent" style="margin-top:2px;flex-shrink:0">
+      <input type="checkbox" id="pConsent" style="width:18px;height:18px;margin:2px 0 0;flex-shrink:0;accent-color:var(--accent,#e0533d)">
       <span>Klijent je dao saglasnost za čuvanje i prikaz fotografije (GDPR).</span>
     </label>
     <button class="btn ghost" id="savePhoto" style="margin-top:10px">Sačuvaj fotku</button>
@@ -277,8 +281,8 @@ $('#slots').onclick = e=>{ const s=e.target.closest('.slot'); if(!s)return;
   document.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));
   s.classList.add('sel'); sel.time=s.dataset.t; check(); };
 
-function check(){ $('#submit').disabled = !(sel.service&&sel.barber&&sel.time&&$('#name').value.trim()&&$('#phone').value.trim()); }
-$('#name').oninput=check; $('#phone').oninput=check;
+function check(){ $('#submit').disabled = !(sel.service&&sel.barber&&sel.time&&$('#name').value.trim()&&$('#phone').value.trim()&&$('#bookConsent').checked); }
+$('#name').oninput=check; $('#phone').oninput=check; $('#bookConsent').onchange=check;
 
 $('#submit').onclick = async ()=>{
   $('#submit').disabled=true;
