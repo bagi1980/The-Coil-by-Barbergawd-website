@@ -101,6 +101,19 @@
   <!-- ADMIN -->
   <div id="admin" style="display:none">
     <button class="btn ghost" id="loadDemo">↻ Učitaj demo (reset za prezentaciju)</button>
+    <div class="section" data-n="•">Dodaj termin</div>
+    <div class="chips" id="aServices"></div>
+    <div class="chips" id="aBarbers" style="margin-top:10px"></div>
+    <div class="row" style="margin-bottom:14px;margin-top:10px">
+      <select id="aDay"></select>
+    </div>
+    <div class="slots" id="aSlots"></div>
+    <div class="row" style="margin-top:10px">
+      <input id="aName" placeholder="Ime i prezime">
+      <input id="aPhone" placeholder="Telefon">
+    </div>
+    <button class="btn" id="aSubmit" disabled style="margin-top:10px">ZAKAŽI TERMIN</button>
+    <div id="aResult" class="muted" style="padding:6px 0"></div>
     <div class="section" data-n="•">Današnji termini</div>
     <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">Klikni <b style="color:var(--cream)">＋</b> (ili fotku) pored klijenta da dodaš/izmeniš fotku sa sesije.</div>
     <div class="list" id="todayList"></div>
@@ -164,7 +177,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t=>{
     t.classList.add('sel');
     $('#book').style.display = t.dataset.tab==='book'?'block':'none';
     $('#admin').style.display = t.dataset.tab==='admin'?'block':'none';
-    if(t.dataset.tab==='admin') renderToday();
+    if(t.dataset.tab==='admin'){ renderToday(); aRefreshSlots(); renderBreaks(); }
   };
 });
 
@@ -181,10 +194,25 @@ $('#barbers').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
   document.querySelectorAll('#barbers .chip').forEach(x=>x.classList.remove('sel'));
   c.classList.add('sel'); sel.barber=c.dataset.b; refreshSlots(); check(); };
 
-// days
-const d0=new Date(), d1=new Date(Date.now()+864e5);
-$('#day').innerHTML = `<option value="${todayStr(d0)}">Danas (${d0.toLocaleDateString('sr-RS')})</option>
-  <option value="${todayStr(d1)}">Sutra (${d1.toLocaleDateString('sr-RS')})</option>`;
+// days — 30 dana unapred, bez nedeljom
+(function(){
+  const DAYS_SR = ['Ned','Pon','Uto','Sre','Čet','Pet','Sub'];
+  const opts = [];
+  let offset = 0, found = 0;
+  while(found < 30){
+    const d = new Date(Date.now() + offset * 864e5);
+    offset++;
+    if(d.getDay() === 0) continue; // preskoči nedeljom
+    const val = todayStr(d);
+    let label;
+    if(found === 0) label = `Danas (${d.toLocaleDateString('sr-RS')})`;
+    else if(found === 1) label = `Sutra (${d.toLocaleDateString('sr-RS')})`;
+    else label = `${DAYS_SR[d.getDay()]}, ${d.toLocaleDateString('sr-RS')}`;
+    opts.push(`<option value="${val}">${label}</option>`);
+    found++;
+  }
+  $('#day').innerHTML = opts.join('');
+})();
 $('#day').onchange = e=>{ sel.day=e.target.value; sel.time=null; refreshSlots(); check(); };
 
 function refreshSlots(){
@@ -205,7 +233,7 @@ $('#submit').onclick = async ()=>{
     name:$('#name').value.trim(), phone:$('#phone').value.trim() });
   const b=barberById(sel.barber).name, s=serviceById(sel.service);
   $('#result').innerHTML = `<div class="ok"><b>TERMIN ZAKAZAN</b><br>${a.name}, ${s.name} kod ${b}<br>
-    ${sel.day===todayStr()?'Danas':'Sutra'} u ${a.time}. Vidimo se!</div>`;
+    ${sel.day===todayStr()?'Danas':new Date(sel.day+'T12:00').toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'numeric'})} u ${a.time}. Vidimo se!</div>`;
   sel.time=null; refreshSlots();
 };
 
@@ -264,9 +292,75 @@ $('#slots').onclick = e=>{ const s=e.target.closest('.slot'); if(!s)return;
   document.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));
   s.classList.add('sel'); sel.time=s.dataset.t; check(); showWait(); };
 
+// ── Admin: dodaj termin ──
+const DAYS_SR_A = ['Ned','Pon','Uto','Sre','Čet','Pet','Sub'];
+let asel = { service:null, barber:null, day:todayStr(), time:null };
+
+$('#aServices').innerHTML = SERVICES.map(s=>
+  `<div class="chip" data-s="${s.id}">${s.name}<small>${s.price} RSD · ${s.min} min</small></div>`).join('');
+$('#aServices').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
+  document.querySelectorAll('#aServices .chip').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel'); asel.service=c.dataset.s; aCheck(); };
+
+$('#aBarbers').innerHTML = BARBERS.map(b=>`<div class="chip" data-b="${b.id}">${b.name}</div>`).join('');
+$('#aBarbers').onclick = e=>{ const c=e.target.closest('.chip'); if(!c)return;
+  document.querySelectorAll('#aBarbers .chip').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel'); asel.barber=c.dataset.b; asel.time=null; aRefreshSlots(); aCheck(); };
+
+(function(){
+  const opts=[];
+  let offset=0, found=0;
+  while(found<30){
+    const d=new Date(Date.now()+offset*864e5); offset++;
+    if(d.getDay()===0) continue;
+    const val=todayStr(d);
+    let label;
+    if(found===0) label=`Danas (${d.toLocaleDateString('sr-RS')})`;
+    else if(found===1) label=`Sutra (${d.toLocaleDateString('sr-RS')})`;
+    else label=`${DAYS_SR_A[d.getDay()]}, ${d.toLocaleDateString('sr-RS')}`;
+    opts.push(`<option value="${val}">${label}</option>`);
+    found++;
+  }
+  $('#aDay').innerHTML=opts.join('');
+})();
+$('#aDay').onchange=e=>{ asel.day=e.target.value; asel.time=null; aRefreshSlots(); aCheck(); };
+
+function aRefreshSlots(){
+  if(!asel.barber){ $('#aSlots').innerHTML='<div class="muted">Izaberi frizera</div>'; return; }
+  const free=freeSlots(asel.day, asel.barber);
+  $('#aSlots').innerHTML=free.length
+    ? free.map(t=>`<div class="slot" data-t="${t}">${t}</div>`).join('')
+    : '<div class="muted">Nema slobodnih termina.</div>';
+}
+$('#aSlots').onclick=e=>{ const s=e.target.closest('.slot'); if(!s)return;
+  document.querySelectorAll('#aSlots .slot').forEach(x=>x.classList.remove('sel'));
+  s.classList.add('sel'); asel.time=s.dataset.t; aCheck(); };
+
+function aCheck(){ $('#aSubmit').disabled=!(asel.service&&asel.barber&&asel.time&&$('#aName').value.trim()&&$('#aPhone').value.trim()); }
+$('#aName').oninput=aCheck; $('#aPhone').oninput=aCheck;
+
+$('#aSubmit').onclick=async()=>{
+  $('#aSubmit').disabled=true;
+  const a=await addAppt({ date:asel.day, time:asel.time, barberId:asel.barber, serviceId:asel.service,
+    name:$('#aName').value.trim(), phone:$('#aPhone').value.trim() });
+  const b=barberById(asel.barber).name;
+  $('#aResult').innerHTML=`✓ Zakazano: ${a.name} kod ${b} u ${a.time} (${asel.day===todayStr()?'danas':asel.day})`;
+  $('#aName').value=''; $('#aPhone').value='';
+  asel.time=null; aRefreshSlots(); aCheck(); renderToday();
+};
+
 // ── Pauze frizera ──
 $('#breakBarber').innerHTML = BARBERS.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
 $('#breakDate').value = todayStr();
+$('#breakDate').addEventListener('change', ()=>{
+  const d = new Date($('#breakDate').value + 'T12:00');
+  if(d.getDay() === 0){
+    alert('Nedeljom ne radimo. Izaberite drugi dan.');
+    // vrati na danas ili ostavi prazno
+    const today = todayStr();
+    $('#breakDate').value = new Date(today+'T12:00').getDay()===0 ? '' : today;
+  }
+});
 
 function renderBreaks(){
   const today=todayStr();
@@ -289,6 +383,7 @@ $('#addBreakBtn').onclick=async()=>{
   if(!barberId||!date||!startTime||!endTime||startTime>=endTime){
     alert('Kraj mora biti posle početka.'); return;
   }
+  if(new Date(date+'T12:00').getDay()===0){ alert('Nedeljom ne radimo.'); return; }
   await addBreak(barberId,date,startTime,endTime);
   renderBreaks(); if(sel.barber) refreshSlots();
 };
@@ -296,7 +391,7 @@ $('#addBreakBtn').onclick=async()=>{
 // live osvežavanje
 onData(()=>{
   if(sel.barber) refreshSlots();
-  if($('#admin').style.display!=='none'){ renderToday(); renderBreaks(); }
+  if($('#admin').style.display!=='none'){ renderToday(); renderBreaks(); aRefreshSlots(); }
 });
 refreshSlots();
 

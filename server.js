@@ -127,6 +127,8 @@ async function handler(req, res) {
   if (p === "/api/appointments" && req.method === "POST") {
     const data = await load();
     const a = await body(req);
+    if (a.date && new Date(a.date + 'T12:00').getDay() === 0)
+      return json(res, 400, { error: 'Nedeljom ne radimo.' });
     a.id = "a" + Date.now() + Math.floor(Math.random() * 1000);
     a.createdAt = Date.now(); a.greeted = false;
     data.appointments.push(a); await save(data); broadcast();

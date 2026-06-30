@@ -201,6 +201,13 @@
   .closed-big{font-family:var(--display);font-weight:600;font-size:clamp(72px,9vw,120px);
     letter-spacing:14px;color:var(--white);line-height:1}
   .closed-sub{font-family:var(--serif);font-style:italic;font-size:28px;color:var(--mut);margin-top:20px}
+  .closed-book{margin-top:44px;display:inline-flex;align-items:center;gap:12px;
+    font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:3px;
+    color:var(--white);background:var(--red2);
+    padding:18px 48px;border-radius:4px;text-decoration:none;
+    box-shadow:0 8px 32px rgba(200,16,46,.45);
+    transition:transform .2s,box-shadow .2s}
+  .closed-book:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(200,16,46,.65)}
   /* ── ticker ────────────────────────────── */
   .ticker{grid-area:ticker;height:64px;margin:0 -52px;border-top:1px solid var(--line);
     background:linear-gradient(90deg,rgba(200,16,46,.10),rgba(22,48,107,.10));overflow:hidden;
@@ -310,6 +317,7 @@
   </div>
   <div class="closed-big">ZATVORENO</div>
   <div class="closed-sub" id="closedSub">Vidimo se sutra u 09:00</div>
+  <a class="closed-book" href="index.html">📅 ZAKAŽI TERMIN</a>
 </div>
 
 <div class="screen">
