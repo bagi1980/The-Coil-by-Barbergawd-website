@@ -15,6 +15,9 @@ if (!process.env.ADMIN_PASSWORD)
   console.warn("UPOZORENJE: ADMIN_PASSWORD nije postavljen — koristi se podrazumevana '1234'. Postavi env var u produkciji!");
 function isAdmin(req) { return (req.headers["x-admin-pass"] || "") === ADMIN_PASSWORD; }
 
+// Koliko dana se čuvaju prošli termini pre automatskog brisanja (GDPR — ograničeno čuvanje)
+const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS, 10) || 90;
+
 const supaKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 const supaUrl = (process.env.SUPABASE_URL || "").trim().replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
 if (supaUrl && supaKey) {
@@ -29,6 +32,12 @@ if (supaUrl && supaKey) {
 const TODAY = () => {
   const t = new Date();
   return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+};
+
+// Datum pre RETENTION_DAYS dana (YYYY-MM-DD) — sve starije od ovoga se briše
+const CUTOFF_DATE = () => {
+  const d = new Date(Date.now() - RETENTION_DAYS * 864e5);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 };
 
 // --- Supabase helpers: konverzija snake_case ↔ camelCase ---
@@ -161,6 +170,29 @@ async function handler(req, res) {
   }
 
   // ── /api/state ──
+  // ── /api/cleanup (Vercel Cron — briše stare termine; GDPR ograničeno čuvanje) ──
+  if (p === "/api/cleanup" && (req.method === "GET" || req.method === "POST")) {
+    const auth = req.headers["authorization"] || "";
+    const cronOk = process.env.CRON_SECRET && auth === "Bearer " + process.env.CRON_SECRET;
+    if (!cronOk && !isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    const cutoff = CUTOFF_DATE();
+    let removed = 0;
+    if (supabase) {
+      const a = await supabase.from("appointments").delete().lt("date", cutoff).select("id");
+      await supabase.from("breaks").delete().lt("date", cutoff);
+      removed = a.data ? a.data.length : 0;
+    } else {
+      const d = fileLoad();
+      const before = d.appointments.length;
+      d.appointments = d.appointments.filter(x => x.date >= cutoff);
+      d.breaks = (d.breaks || []).filter(x => x.date >= cutoff);
+      removed = before - d.appointments.length;
+      fileSave(d);
+    }
+    broadcast();
+    return json(res, 200, { ok: true, cutoff, removed, retentionDays: RETENTION_DAYS });
+  }
+
   // ── /api/admin-login POST ──
   if (p === "/api/admin-login" && req.method === "POST") {
     const { password } = await body(req);
