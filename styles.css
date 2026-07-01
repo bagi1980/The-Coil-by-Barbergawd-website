@@ -23,8 +23,11 @@ a{color:inherit}
 .topnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px}
 .topnav .mini{display:flex;align-items:center;gap:12px}
 .pole{width:18px;height:44px;border-radius:9px;border:1.5px solid rgba(255,255,255,.22);overflow:hidden;position:relative;background:#0c0c0e;box-shadow:0 4px 14px rgba(0,0,0,.4)}
-/* Ista logika kao TV strana: ugao 120° → y-period 56px, translateY(112px)=2×56 → besprekoran loop (bez skoka) */
-.pole i{position:absolute;left:-50%;top:-200%;width:200%;height:600%;
+/* Ista logika kao TV strana: ugao 120° → y-period 56px, translateY(112px) → besprekoran loop.
+   VAŽNO: preklapanje mora biti APSOLUTNO (px), ne %, jer je pomeraj fiksan 112px.
+   Manji pol sa top:-200% dao bi samo -88px preklapanja < 112px → praznina gore = "skok".
+   top:-128px (kao TV) → 128px preklapanja > 112px → uvek pokriva. */
+.pole i{position:absolute;left:-50%;top:-128px;width:200%;height:384px;
   background:repeating-linear-gradient(120deg,var(--red) 0 14px,var(--cream) 14px 28px,var(--blue) 28px 42px,var(--cream) 42px 56px);
   animation:poleSpin 4s linear infinite}
 @keyframes poleSpin{to{transform:translateY(112px)}}
