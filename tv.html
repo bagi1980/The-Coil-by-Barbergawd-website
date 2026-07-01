@@ -489,12 +489,14 @@ function preloadDemoPhotos(done){
   });
 }
 function demoToday(){
-  const openM=SALON.hours.open*60, closeM=SALON.hours.close*60, step=25;
-  const m=new Date().getHours()*60+new Date().getMinutes();
-  // Prvi je "u stolici" (10 min pre sada), ostali nadolazeći; sve stane u radno vreme
-  const start=Math.max(openM, Math.min(m-10, closeM-step*(DEMO_CLIENTS.length-1)-5));
+  const openM=SALON.hours.open*60, closeM=SALON.hours.close*60;
+  const slot=SALON.slotMin||30, n=DEMO_CLIENTS.length;
+  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  // Termini na mreži od pola sata (kao na zakazivanju): prvi = trenutni slot (u stolici), ostali nadolazeći
+  const curSlot=Math.floor(nowM/slot)*slot;
+  const start=Math.max(openM, Math.min(curSlot, closeM-slot*(n-1)));
   return DEMO_CLIENTS.map((c,i)=>{
-    const t=start+i*step;
+    const t=start+i*slot;
     return { id:'demo'+i, date:todayStr(),
       time:String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),
       name:c.name, phone:'', serviceId:c.serviceId, barberId:c.barberId, _photo:c._photo };
