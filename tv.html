@@ -463,11 +463,53 @@ $('#ytGo').onclick=()=>{ const e=ytEmbed($('#ytInput').value); if(!e){$('#ytInpu
 $('#ytInput').onkeydown=ev=>{ if(ev.key==='Enter') $('#ytGo').click(); };
 $('#ytSearch').onclick=()=>{ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent($('#ytInput').value.trim()||'lofi barbershop'),'_blank'); };
 
+// ── Demo klijenti (kad nema pravih termina — da TV ne bude prazna) ──
+// Fotke: naziv fajla = ime klijenta, u img/ (proba .jpg/.jpeg/.png/.webp).
+// 3 postojeće fotke (demo-client*.png) su mapirane na fiksne fajlove.
+const DEMO_CLIENTS=[
+  {name:'Miloš',  serviceId:'s2', barberId:'b1', src:['img/demo-client.png']},
+  {name:'Luka',   serviceId:'s4', barberId:'b2', src:['img/Luka.jpg','img/Luka.jpeg','img/Luka.png','img/Luka.webp']},
+  {name:'Vuk',    serviceId:'s1', barberId:'b3', src:['img/Vuk.jpg','img/Vuk.jpeg','img/Vuk.png','img/Vuk.webp']},
+  {name:'Đorđe',  serviceId:'s3', barberId:'b1', src:['img/demo-client2.png']},
+  {name:'Aleksa', serviceId:'s2', barberId:'b2', src:['img/demo-client3.png']}
+];
+// Učitaj fotke unapred; postavi _photo na prvu koja postoji (ako nijedna → ikonica stolice)
+function preloadDemoPhotos(done){
+  let pending=DEMO_CLIENTS.length;
+  const fin=()=>{ if(--pending<=0 && done) done(); };
+  DEMO_CLIENTS.forEach(c=>{
+    let i=0;
+    (function tryNext(){
+      if(i>=c.src.length){ fin(); return; }
+      const url=c.src[i++], im=new Image();
+      im.onload=()=>{ c._photo=url; fin(); };
+      im.onerror=tryNext;
+      im.src=url;
+    })();
+  });
+}
+function demoToday(){
+  const openM=SALON.hours.open*60, closeM=SALON.hours.close*60, step=25;
+  const m=new Date().getHours()*60+new Date().getMinutes();
+  // Prvi je "u stolici" (10 min pre sada), ostali nadolazeći; sve stane u radno vreme
+  const start=Math.max(openM, Math.min(m-10, closeM-step*(DEMO_CLIENTS.length-1)-5));
+  return DEMO_CLIENTS.map((c,i)=>{
+    const t=start+i*step;
+    return { id:'demo'+i, date:todayStr(),
+      time:String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),
+      name:c.name, phone:'', serviceId:c.serviceId, barberId:c.barberId, _photo:c._photo };
+  });
+}
+function photoOf(a){ return (a && a._photo) || getPhoto(a.name,a.phone); }
+
 // ── Stanje sesije ──
+let _demoMode=false;
 function toMins(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function getSessionState(){
   const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
-  const today=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  let today=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  _demoMode=false;
+  if(!today.length){ today=demoToday(); _demoMode=true; }   // nema pravih → virtualni klijenti
   const current=[], upcoming=[];
   for(const a of today){
     const start=toMins(a.time), dur=(serviceById(a.serviceId)?.min)||30;
@@ -478,7 +520,7 @@ function getSessionState(){
 }
 
 // ── Cycling panel (desna karta: na redu → klijent A → klijent B…) ──
-let _slides=[], _slideIdx=0, _cycleTimer=null, _fading=false;
+let _slides=[], _slideIdx=0, _cycleTimer=null, _fading=false, _slideKey='';
 
 function applySlide(slide){
   const sched=$('#npSched'), body=$('#npBody'), empty=$('#npEmpty'), bg=$('#npBg');
@@ -513,7 +555,7 @@ function applySlide(slide){
   }
 
   const a=slide.client, s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
-  const photo=getPhoto(a.name,a.phone);
+  const photo=photoOf(a);
   if(slide.type==='next'){
     $('#npLabel').innerHTML='<span class="dot"></span>NA REDU';
     $('#npKicker').textContent='Sledeći u stolici';
@@ -532,7 +574,8 @@ function buildSlides(current,next,upcoming){
   const allToday=[...current,...upcoming];
   if(allToday.length) slides.push({type:'tv',list:allToday.slice(0,4),currentIds:current.map(c=>c.id)});
   for(const c of current) slides.push({type:'now',client:c});
-  if(next) slides.push({type:'next',client:next});
+  if(_demoMode){ for(const c of upcoming) slides.push({type:'next',client:c}); }  // demo: vrti svih 5
+  else if(next) slides.push({type:'next',client:next});
   return slides.length?slides:[{type:'empty'}];
 }
 
@@ -567,10 +610,12 @@ function renderQueue(){
     return;
   }
   const {current,next,upcoming}=getSessionState();
+  // U demo modu vreme je relativno na "sada" — osveži prikaz svakih ~10 min da prati sat
+  const demoK=_demoMode?('#'+Math.floor(Date.now()/600000)):'';
 
   // Leva lista: klijenti u stolici (označeni) + nadolazeći
   const allVisible=[...current,...upcoming].slice(0,5);
-  const qKey=allVisible.map(a=>a.id+a.greeted).join(',')+current.map(a=>a.id).join('|');
+  const qKey=allVisible.map(a=>a.id+a.greeted).join(',')+current.map(a=>a.id).join('|')+demoK;
   if(qKey!==_lastQKey){
     _lastQKey=qKey;
     $('#queue').innerHTML=allVisible.length?allVisible.map(a=>{
@@ -587,11 +632,10 @@ function renderQueue(){
   const newSlides=buildSlides(current,next,upcoming);
   const slideKey=s=>s.type==='tv'
     ?'tv:'+(s.list||[]).map(a=>a.id).join('-')+':'+(s.currentIds||[]).join('-')
-    :s.type+':'+(s.client?.id||'')+(s.client?':'+(getPhoto(s.client.name,s.client.phone)?'1':'0'):'');
-  const newKey=newSlides.map(slideKey).join(',');
-  const oldKey=_slides.map(slideKey).join(',');
-  if(newKey!==oldKey){
-    _slides=newSlides; _slideIdx=0;
+    :s.type+':'+(s.client?.id||'')+(s.client?':'+(photoOf(s.client)?'1':'0'):'');
+  const newKey=newSlides.map(slideKey).join(',')+demoK;
+  if(newKey!==_slideKey){
+    _slideKey=newKey; _slides=newSlides; _slideIdx=0;
     applySlide(_slides[0]);
     startCycle();
   }
@@ -603,7 +647,7 @@ let wQueue=[],wIdx=0,wTimer=null,wActive=false;
 function renderWelcome(a){
   const first=(a.name||'').split(' ')[0]||a.name;
   $('#wName').innerHTML=`<span>${first}</span>`;
-  const photo=getPhoto(a.name,a.phone);
+  const photo=photoOf(a);
   if(photo){$('#wImg').src=photo;$('#wPic').style.display='block';$('#wCap').textContent='Lepo je videti te ponovo.';}
   else{$('#wPic').style.display='none';$('#wCap').textContent='Dobrodošao u salon.';}
   $('#wCount').textContent=wQueue.length>1?`${wIdx+1} / ${wQueue.length}`:'';
@@ -691,6 +735,7 @@ function checkClosed(){
 setInterval(checkClosed, 60000);
 
 tick(); renderQueue(); checkClosed();
+preloadDemoPhotos(()=>renderQueue());   // učitaj demo fotke pa ponovo iscrtaj sa slikama
 </script>
 </body>
 </html>
