@@ -3,18 +3,21 @@ const _state = { appointments: [], photos: {}, breaks: [] };
 const _subs = [];
 const _vers = {};
 let _lastHash = '';
+let _loaded = false;   // true nakon prvog uspešnog /api/state — sprečava blic praznog stanja
 
 function toMins(t) { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m; }
 function loadAppts() { return _state.appointments; }
 function loadBreaks() { return _state.breaks; }
 function getPhoto(name, phone) { return _state.photos[clientKey(name, phone)] || null; }
 function onData(cb) { _subs.push(cb); }
+function isLoaded() { return _loaded; }
 function _emit() { _subs.forEach(cb => { try { cb(); } catch (e) {} }); }
 
 async function _refresh() {
   try {
     const r = await fetch("/api/state");
     const s = await r.json();
+    _loaded = true;
     const pv = s.photoVers || {};
     const hash = JSON.stringify((s.appointments || []).map(a => ({ id: a.id, greeted: a.greeted })))
       + '|' + Object.keys(pv).sort().map(k => k + ':' + pv[k]).join(',');

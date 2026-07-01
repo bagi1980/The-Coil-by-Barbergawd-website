@@ -74,6 +74,9 @@
   .q .tag{margin-left:auto;font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:2px;
     color:var(--red2);border:1px solid rgba(230,57,80,.4);border-radius:999px;padding:6px 14px}
   .empty{color:var(--mut);font-size:22px;padding:22px;font-family:var(--serif);font-style:italic}
+  .q-loading{display:flex;flex-direction:column;align-items:center;gap:20px;padding:44px 0}
+  .q-loading .pole{width:34px;height:84px}
+  .q-loading .ll{font-family:var(--display);font-weight:500;letter-spacing:5px;font-size:16px;color:var(--mut);text-transform:uppercase}
 
   /* ── right: next-client promo + music ──── */
   .right{grid-area:right;display:flex;flex-direction:column;gap:22px;min-height:0}
@@ -555,6 +558,14 @@ function startCycle(){
 // ── Queue (leva lista) ──
 let _lastQKey='';
 function renderQueue(){
+  // Ne prikazuj prazno stanje pre prvog učitavanja — izbegava blic "Nema termina"
+  if(!isLoaded()){
+    if(_lastQKey!=='__loading__'){
+      _lastQKey='__loading__';
+      $('#queue').innerHTML='<div class="q-loading"><div class="pole"><i></i></div><div class="ll">Učitavanje…</div></div>';
+    }
+    return;
+  }
   const {current,next,upcoming}=getSessionState();
 
   // Leva lista: klijenti u stolici (označeni) + nadolazeći
