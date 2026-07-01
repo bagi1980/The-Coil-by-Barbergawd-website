@@ -193,6 +193,8 @@
     display:none;flex-direction:column;align-items:center;justify-content:center;
     backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
   .closed-wrap.on{display:flex}
+  /* Prikaži overlay već pri prvom paint-u ako je zatvoreno (bez blica TV ekrana) */
+  html.tv-closed .closed-wrap{display:flex}
   .closed-mark{display:flex;align-items:center;gap:18px;margin-bottom:40px}
   .closed-mark .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);
     overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
@@ -285,6 +287,12 @@
     .demo{bottom:10px;right:10px}
   }
 </style>
+<script src="config.js"></script>
+<script>
+  // Odredi "zatvoreno" PRE prvog paint-a da TV ekran ne bljesne pre "Zatvoreno" overlay-a
+  document.documentElement.classList.toggle('tv-closed',
+    (function(){ var h=new Date().getHours(); return h<SALON.hours.open||h>=SALON.hours.close; })());
+</script>
 </head>
 <body>
 <canvas id="bg"></canvas>
@@ -420,7 +428,6 @@
     } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
   })();
 </script>
-<script src="config.js"></script>
 <script>window.POLL_MS = 3000;</script>
 <script src="api.js"></script>
 <script>
@@ -726,6 +733,7 @@ $('#demo').onclick=()=>{
 function checkClosed(){
   const h=new Date().getHours();
   const closed=h<SALON.hours.open||h>=SALON.hours.close;
+  document.documentElement.classList.toggle('tv-closed',closed);
   $('#closedWrap').classList.toggle('on',closed);
   if(closed){
     const openH=String(SALON.hours.open).padStart(2,'0')+':00';
