@@ -5,7 +5,11 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["**/*"]
+        "includeFiles": [
+          "index.html", "tv.html", "privatnost.html", "styles.css",
+          "config.js", "api.js", "wave-bg.js", "data.json",
+          "img/**", "lib/**"
+        ]
       }
     }
   ],

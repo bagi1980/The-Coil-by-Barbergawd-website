@@ -287,7 +287,7 @@
     .demo{bottom:10px;right:10px}
   }
 </style>
-<script src="config.js"></script>
+<script src="config.js?v=2"></script>
 <script>
   // Odredi "zatvoreno" PRE prvog paint-a da TV ekran ne bljesne pre "Zatvoreno" overlay-a
   document.documentElement.classList.toggle('tv-closed',
@@ -429,7 +429,7 @@
   })();
 </script>
 <script>window.POLL_MS = 3000;</script>
-<script src="api.js"></script>
+<script src="api.js?v=2"></script>
 <script>
 const $=s=>document.querySelector(s);
 
@@ -474,10 +474,10 @@ $('#ytSearch').onclick=()=>{ window.open('https://www.youtube.com/results?search
 // Fotke: naziv fajla = ime klijenta, u img/ (proba .jpg/.jpeg/.png/.webp).
 // 3 postojeće fotke (demo-client*.png) su mapirane na fiksne fajlove.
 const DEMO_CLIENTS=[
-  {name:'Miloš',  serviceId:'s2', barberId:'b1', src:['img/demo-client.png']},
+  {name:'Miloš',  serviceId:'s2', barberId:'b1', src:['img/demo-client.jpg']},
   {name:'Luka',   serviceId:'s4', barberId:'b2', src:['img/Luka.jpg','img/Luka.jpeg','img/Luka.png','img/Luka.webp']},
-  {name:'Đorđe',  serviceId:'s3', barberId:'b3', src:['img/demo-client2.png']},
-  {name:'Aleksa', serviceId:'s1', barberId:'b1', src:['img/demo-client3.png']}
+  {name:'Đorđe',  serviceId:'s3', barberId:'b3', src:['img/demo-client2.jpg']},
+  {name:'Aleksa', serviceId:'s1', barberId:'b1', src:['img/demo-client3.jpg']}
 ];
 // Učitaj fotke unapred; postavi _photo na prvu koja postoji (ako nijedna → ikonica stolice)
 function preloadDemoPhotos(done){
@@ -508,7 +508,7 @@ function demoToday(){
       name:c.name, phone:'', serviceId:c.serviceId, barberId:c.barberId, _photo:c._photo };
   });
 }
-function photoOf(a){ return (a && a._photo) || getPhoto(a.name,a.phone); }
+function photoOf(a){ return (a && a._photo) || getPhoto(a); }
 
 // ── Stanje sesije ──
 let _demoMode=false;
@@ -554,8 +554,8 @@ function applySlide(slide){
         const s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
         const inChair=slide.currentIds.includes(a.id);
         return `<div class="np-sched-row${inChair?' active':''}">
-          <div class="sr-t">${a.time}</div>
-          <div class="sr-i"><div class="sr-n">${a.name}</div><div class="sr-m">${s} · ${b}</div></div>
+          <div class="sr-t">${esc(a.time)}</div>
+          <div class="sr-i"><div class="sr-n">${esc(a.name)}</div><div class="sr-m">${esc(s)} · ${esc(b)}</div></div>
           ${inChair?'<div class="sr-b">U STOLICI</div>':''}
         </div>`;
       }).join('');
@@ -629,8 +629,8 @@ function renderQueue(){
     $('#queue').innerHTML=allVisible.length?allVisible.map(a=>{
       const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
       const inChair=current.includes(a);
-      return `<div class="q ${inChair?'now':''}"><div class="qt">${a.time}</div>
-        <div><div class="qn">${a.name}</div><div class="qm">${s} · ${b}</div></div>
+      return `<div class="q ${inChair?'now':''}"><div class="qt">${esc(a.time)}</div>
+        <div><div class="qn">${esc(a.name)}</div><div class="qm">${esc(s)} · ${esc(b)}</div></div>
         ${inChair?'<div class="tag">U STOLICI</div>':''}
         </div>`;
     }).join(''):'<div class="empty">Nema više termina danas — uđi, sediš odmah.</div>';
@@ -654,7 +654,7 @@ const WELCOME_MS=10000;
 let wQueue=[],wIdx=0,wTimer=null,wActive=false;
 function renderWelcome(a){
   const first=(a.name||'').split(' ')[0]||a.name;
-  $('#wName').innerHTML=`<span>${first}</span>`;
+  $('#wName').innerHTML=`<span>${esc(first)}</span>`;
   const photo=photoOf(a);
   if(photo){$('#wImg').src=photo;$('#wPic').style.display='block';$('#wCap').textContent='Lepo je videti te ponovo.';}
   else{$('#wPic').style.display='none';$('#wCap').textContent='Dobrodošao u salon.';}

@@ -8,14 +8,18 @@ let _loaded = false;   // true nakon prvog uspešnog /api/state — sprečava bl
 function toMins(t) { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m; }
 function loadAppts() { return _state.appointments; }
 function loadBreaks() { return _state.breaks; }
-function getPhoto(name, phone) { return _state.photos[clientKey(name, phone)] || null; }
+// fotke su keširane po photoKey (hash sa servera — telefon se ne otkriva javno)
+function getPhoto(a) { return (a && _state.photos[a.photoKey]) || null; }
 function onData(cb) { _subs.push(cb); }
 function isLoaded() { return _loaded; }
+// forsiraj pun refresh (posle admin logina — da stignu telefoni u keš)
+function forceRefresh() { _lastHash = ''; return _refresh(); }
 function _emit() { _subs.forEach(cb => { try { cb(); } catch (e) {} }); }
 
 async function _refresh() {
   try {
-    const r = await fetch("/api/state");
+    // admin šalje lozinku da bi dobio i telefone; javne stranice dobijaju podatke bez telefona
+    const r = await fetch("/api/state", { headers: adminHeaders() });
     const s = await r.json();
     _loaded = true;
     const pv = s.photoVers || {};

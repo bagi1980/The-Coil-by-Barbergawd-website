@@ -30,3 +30,5 @@ function todayStr(d = new Date()) {
 function serviceById(id) { return SERVICES.find(s => s.id === id); }
 function barberById(id) { return BARBERS.find(b => b.id === id); }
 function clientKey(name, phone) { return (name || "").trim().toLowerCase() + "|" + (phone || "").trim(); }
+// HTML escape — obavezno za svaki korisnički unos koji ide u innerHTML (anti-XSS)
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }

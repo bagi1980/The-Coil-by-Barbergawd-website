@@ -2,6 +2,7 @@
 // Storage prioritet: Supabase (produkcija) → data.json (lokal)
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const ROOT = __dirname;
 const DB = process.env.VERCEL ? "/tmp/data.json" : path.join(ROOT, "data.json");
@@ -10,10 +11,32 @@ const SEED = path.join(ROOT, "data.json");
 // --- Supabase klijent ---
 let supabase = null;
 // --- Admin auth ---
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+// U produkciji (Vercel) bez env vara admin je zaključan — nema podrazumevane lozinke.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (process.env.VERCEL ? null : "1234");
 if (!process.env.ADMIN_PASSWORD)
-  console.warn("UPOZORENJE: ADMIN_PASSWORD nije postavljen — koristi se podrazumevana '1234'. Postavi env var u produkciji!");
-function isAdmin(req) { return (req.headers["x-admin-pass"] || "") === ADMIN_PASSWORD; }
+  console.warn("UPOZORENJE: ADMIN_PASSWORD nije postavljen" + (process.env.VERCEL ? " — admin funkcije su onemogućene!" : " — lokalno se koristi '1234'."));
+function safeEq(a, b) {
+  const x = Buffer.from(String(a || "")), y = Buffer.from(String(b || ""));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+function isAdmin(req) { return !!ADMIN_PASSWORD && safeEq(req.headers["x-admin-pass"], ADMIN_PASSWORD); }
+
+// Javni photo ključ — hash od "ime|telefon" da se telefoni ne otkrivaju javnom API-ju
+function pkey(k) { return crypto.createHash("sha256").update("pk1:" + k).digest("hex").slice(0, 20); }
+
+// Validacija unosa pri zakazivanju (štiti od XSS payload-a i đubreta u bazi)
+function cleanStr(s, max) { return String(s == null ? "" : s).replace(/[\x00-\x1f<>&"'`]/g, "").trim().slice(0, max); }
+function validateAppt(a) {
+  if (!a.name) return "Ime je obavezno.";
+  if (!a.phone) return "Telefon je obavezan.";
+  if (a.phone !== "walk-in" && !/^[\d+\-/() .]{3,30}$/.test(a.phone)) return "Neispravan broj telefona."; // "walk-in" šalje TV
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date || "")) return "Neispravan datum.";
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(a.time || "")) return "Neispravno vreme.";
+  if (!/^b\d{1,3}$/.test(a.barberId || "")) return "Neispravan frizer.";
+  if (a.serviceId && !/^s\d{1,3}$/.test(a.serviceId)) return "Neispravna usluga.";
+  return null;
+}
+function toMins(t) { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + m; }
 
 // Koliko dana se čuvaju prošli termini pre automatskog brisanja (GDPR — ograničeno čuvanje)
 const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS, 10) || 90;
@@ -65,11 +88,25 @@ async function sbLoad() {
   ]);
   const { data: phVers } = await supabase.from("photos").select("client_key, version");
   const photoVers = {};
-  (phVers || []).forEach(r => { photoVers[r.client_key] = r.version; });
+  (phVers || []).forEach(r => { photoVers[pkey(r.client_key)] = r.version; });
   return {
     appointments: (appts || []).map(apptFromRow),
     breaks: (brs || []).map(breakFromRow),
     photoVers,
+  };
+}
+
+// Javni oblik state odgovora: photoKey umesto telefona; telefon samo za admina
+function publicState(d, admin) {
+  return {
+    appointments: (d.appointments || []).map(a => {
+      const out = { id: a.id, date: a.date, time: a.time, barberId: a.barberId, serviceId: a.serviceId,
+        name: a.name, greeted: a.greeted, photoKey: pkey(clientKey(a.name, a.phone)) };
+      if (admin) out.phone = a.phone;
+      return out;
+    }),
+    breaks: d.breaks || [],
+    photoVers: d.photoVers || {},
   };
 }
 
@@ -99,10 +136,32 @@ async function sbRemoveBreak(id) {
   await supabase.from("breaks").delete().eq("id", id);
 }
 
-// --- Supabase: photos ---
-async function sbGetPhoto(key) {
-  const { data } = await supabase.from("photos").select("data_url").eq("client_key", key).single();
+// --- Supabase: photos (javni ključ = hash, razrešava se u client_key) ---
+async function sbGetPhoto(hashKey) {
+  const { data: keys } = await supabase.from("photos").select("client_key");
+  const row = (keys || []).find(r => pkey(r.client_key) === hashKey);
+  if (!row) return null;
+  const { data } = await supabase.from("photos").select("data_url").eq("client_key", row.client_key).single();
   return data ? data.data_url : null;
+}
+
+// --- Provera zauzetosti slota (server-side, sprečava duplo zakazivanje) ---
+async function slotTaken(a) {
+  let appts, breaks;
+  if (supabase) {
+    const [{ data: ex }, { data: brs }] = await Promise.all([
+      supabase.from("appointments").select("id").eq("date", a.date).eq("barber_id", a.barberId).eq("time", a.time).limit(1),
+      supabase.from("breaks").select("*").eq("date", a.date).eq("barber_id", a.barberId),
+    ]);
+    if (ex && ex.length) return true;
+    breaks = (brs || []).map(breakFromRow);
+  } else {
+    const d = fileLoad();
+    if ((d.appointments || []).some(x => x.date === a.date && x.barberId === a.barberId && x.time === a.time)) return true;
+    breaks = (d.breaks || []).filter(b => b.date === a.date && b.barberId === a.barberId);
+  }
+  const t = toMins(a.time);
+  return breaks.some(b => t >= toMins(b.startTime) && t < toMins(b.endTime));
 }
 
 async function sbSetPhoto(key, dataUrl, consent) {
@@ -142,6 +201,7 @@ function clientKey(name, phone) { return (name || "").trim().toLowerCase() + "|"
 
 // --- SSE ---
 const clients = [];
+const loginFails = new Map(); // ip → { n, t } za rate limit logina
 function broadcast() { clients.forEach(res => { try { res.write("data: update\n\n"); } catch {} }); }
 
 function body(req) {
@@ -151,23 +211,20 @@ function body(req) {
   });
 }
 function json(res, code, obj) {
-  res.writeHead(code, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+  res.writeHead(code, { "Content-Type": "application/json" });
   res.end(JSON.stringify(obj));
 }
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
-  ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml",
-  ".ico": "image/x-icon", ".json": "application/json" };
+  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+  ".svg": "image/svg+xml", ".ico": "image/x-icon" };
 
 async function handler(req, res) {
   const u = new URL(req.url, "http://x");
   const p = u.pathname;
 
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, { "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,POST,DELETE", "Access-Control-Allow-Headers": "Content-Type" });
-    return res.end();
-  }
+  // Aplikacija je same-origin — bez CORS header-a (drugi sajtovi ne mogu da čitaju API)
+  if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
 
   // ── /api/state ──
   // ── /api/cleanup (Vercel Cron — briše stare termine; GDPR ograničeno čuvanje) ──
@@ -193,30 +250,46 @@ async function handler(req, res) {
     return json(res, 200, { ok: true, cutoff, removed, retentionDays: RETENTION_DAYS });
   }
 
-  // ── /api/admin-login POST ──
+  // ── /api/admin-login POST (rate limit protiv pogađanja lozinke) ──
   if (p === "/api/admin-login" && req.method === "POST") {
+    if (!ADMIN_PASSWORD) return json(res, 503, { ok: false, error: "Admin nije konfigurisan." });
+    const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+    const rec = loginFails.get(ip) || { n: 0, t: Date.now() };
+    if (Date.now() - rec.t > 600000) { rec.n = 0; rec.t = Date.now(); }
+    if (rec.n >= 10) return json(res, 429, { ok: false, error: "Previše pokušaja. Sačekaj 10 minuta." });
     const { password } = await body(req);
-    const ok = password === ADMIN_PASSWORD;
+    const ok = safeEq(password, ADMIN_PASSWORD);
+    if (!ok) { rec.n++; loginFails.set(ip, rec); }
     return json(res, ok ? 200 : 401, { ok });
   }
 
+  // ── /api/state (javno: bez telefona; admin sa x-admin-pass dobija i telefone) ──
   if (p === "/api/state" && req.method === "GET") {
+    const admin = isAdmin(req);
     if (supabase) {
       const d = await sbLoad();
-      return json(res, 200, d);
+      return json(res, 200, publicState(d, admin));
     }
     const d = fileLoad();
-    return json(res, 200, { appointments: d.appointments, photoVers: d.photoVers, breaks: d.breaks });
+    const pv = {}; // fajl-storage drži sirove ključeve (ime|telefon) — hashuj pre slanja
+    for (const k of Object.keys(d.photoVers || {})) pv[pkey(k)] = d.photoVers[k];
+    return json(res, 200, publicState({ ...d, photoVers: pv }, admin));
   }
 
   // ── /api/appointments POST ──
   if (p === "/api/appointments" && req.method === "POST") {
-    const a = await body(req);
-    if (a.date && new Date(a.date + "T12:00").getDay() === 0)
+    const raw = await body(req);
+    // samo poznata polja — ništa drugo ne ulazi u bazu
+    const a = { date: raw.date, time: raw.time, barberId: raw.barberId, serviceId: raw.serviceId || null,
+      name: cleanStr(raw.name, 60), phone: cleanStr(raw.phone, 30) };
+    const err = validateAppt(a);
+    if (err) return json(res, 400, { error: err });
+    if (new Date(a.date + "T12:00").getDay() === 0)
       return json(res, 400, { error: "Nedeljom ne radimo." });
+    if (await slotTaken(a))
+      return json(res, 409, { error: "Termin je upravo zauzet — izaberi drugi." });
     a.id = "a" + Date.now() + Math.floor(Math.random() * 1000);
     a.createdAt = Date.now(); a.greeted = false;
-    console.log("supabase active:", !!supabase, "SUPABASE_URL:", !!process.env.SUPABASE_URL);
     if (supabase) {
       try {
         const saved = await sbAddAppt(a);
@@ -271,7 +344,11 @@ async function handler(req, res) {
   // ── /api/breaks POST ──
   if (p === "/api/breaks" && req.method === "POST") {
     if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
-    const b = await body(req);
+    const raw = await body(req);
+    const b = { barberId: raw.barberId, date: raw.date, startTime: raw.startTime, endTime: raw.endTime };
+    if (!/^b\d{1,3}$/.test(b.barberId || "") || !/^\d{4}-\d{2}-\d{2}$/.test(b.date || "")
+      || !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.startTime || "") || !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.endTime || ""))
+      return json(res, 400, { error: "Neispravna pauza." });
     b.id = "br" + Date.now();
     if (supabase) { const saved = await sbAddBreak(b); broadcast(); return json(res, 200, saved); }
     const d = fileLoad(); d.breaks = d.breaks || []; d.breaks.push(b);
@@ -287,11 +364,13 @@ async function handler(req, res) {
     fileSave(d); broadcast(); return json(res, 200, { ok: true });
   }
 
-  // ── /api/photo GET ──
+  // ── /api/photo GET (ključ = hash, ne otkriva ime|telefon) ──
   if (p === "/api/photo" && req.method === "GET") {
     const key = u.searchParams.get("key") || "";
     if (supabase) return json(res, 200, { dataUrl: await sbGetPhoto(key) });
-    const d = fileLoad(); return json(res, 200, { dataUrl: (d.photos || {})[key] || null });
+    const d = fileLoad();
+    const raw = Object.keys(d.photos || {}).find(k => pkey(k) === key);
+    return json(res, 200, { dataUrl: raw ? d.photos[raw] : null });
   }
 
   // ── /api/photos POST ──
@@ -299,6 +378,8 @@ async function handler(req, res) {
     if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
     const { name, phone, dataUrl, consent } = await body(req);
     if (!consent) return json(res, 400, { error: "Nedostaje saglasnost klijenta za čuvanje fotografije." });
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 2e6)
+      return json(res, 400, { error: "Neispravna ili prevelika slika (max ~1.5MB)." });
     const key = clientKey(name, phone);
     if (supabase) { await sbSetPhoto(key, dataUrl, consent); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad();
@@ -334,9 +415,9 @@ async function handler(req, res) {
       { id: "d3", date: today, time: at(130), barberId: "b1", serviceId: "s2", name: "Devin Brooks", phone: "3125550137", greeted: false, createdAt: Date.now() },
     ];
     const photos = {
-      "james carter|3125550141": "img/demo-client.png",
-      "andre wilson|3125550149": "img/demo-client2.png",
-      "devin brooks|3125550137": "img/demo-client3.png",
+      "james carter|3125550141": "img/demo-client.jpg",
+      "andre wilson|3125550149": "img/demo-client2.jpg",
+      "devin brooks|3125550137": "img/demo-client3.jpg",
     };
     if (supabase) {
       await sbLoadDemo(appointments, photos);
@@ -347,13 +428,23 @@ async function handler(req, res) {
     fileSave(d); broadcast(); return json(res, 200, { ok: true });
   }
 
-  // ── statični fajlovi ──
+  // ── statični fajlovi (whitelist ekstenzija; bez data.json, server koda, dot-fajlova) ──
+  const STATIC_EXT = new Set([".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico"]);
+  const STATIC_DENY = new Set(["server.js", "make-doc.js"]);
   let file = p === "/" ? "/index.html" : p;
   const fp = path.join(ROOT, path.normalize(file));
-  if (!fp.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
+  const rel = path.relative(ROOT, fp);
+  const ext = path.extname(fp).toLowerCase();
+  if (!fp.startsWith(ROOT + path.sep) || !STATIC_EXT.has(ext) || STATIC_DENY.has(rel)
+    || rel.split(path.sep).some(s => s.startsWith(".") || s === "node_modules")) {
+    res.writeHead(404); return res.end("not found");
+  }
   fs.readFile(fp, (err, buf) => {
     if (err) { res.writeHead(404); return res.end("not found"); }
-    res.writeHead(200, { "Content-Type": TYPES[path.extname(fp)] || "application/octet-stream" });
+    const cache = ext === ".html" ? "no-cache"
+      : (ext === ".css" || ext === ".js") ? "public, max-age=300"
+      : "public, max-age=86400";
+    res.writeHead(200, { "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": cache });
     res.end(buf);
   });
 }

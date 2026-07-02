@@ -88,9 +88,9 @@
     <!-- GALLERY -->
     <div class="section" data-n="✦">Radovi iz stolice</div>
     <div class="gallery">
-      <img src="img/demo-client.png" alt="Šišanje — primer rada">
-      <img src="img/demo-client2.png" alt="Fade — primer rada">
-      <img src="img/demo-client3.png" alt="Brada i stil — primer rada">
+      <img src="img/demo-client.jpg" alt="Šišanje — primer rada">
+      <img src="img/demo-client2.jpg" alt="Fade — primer rada">
+      <img src="img/demo-client3.jpg" alt="Brada i stil — primer rada">
     </div>
 
     <!-- TESTIMONIAL -->
@@ -208,8 +208,8 @@
     } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
   })();
 </script>
-<script src="config.js"></script>
-<script src="api.js"></script>
+<script src="config.js?v=2"></script>
+<script src="api.js?v=2"></script>
 <script>
 const $ = s => document.querySelector(s);
 let sel = { service:null, barber:null, day:todayStr(), time:null };
@@ -241,13 +241,13 @@ async function adminLogin(){
   const pass=$('#adminPassInput').value;
   try{
     const r=await fetch('/api/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
-    if(r.ok){ localStorage.setItem('adminPass',pass); closeAdminGate(); $('#admin').style.display='block'; renderToday(); aRefreshSlots(); renderBreaks(); }
+    if(r.ok){ localStorage.setItem('adminPass',pass); closeAdminGate(); $('#admin').style.display='block'; await forceRefresh(); renderToday(); aRefreshSlots(); renderBreaks(); }
     else { $('#adminGateErr').textContent='Pogrešna lozinka.'; }
   }catch(e){ $('#adminGateErr').textContent='Greška u konekciji.'; }
 }
 $('#adminLoginBtn').onclick=adminLogin;
 $('#adminPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
-$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); $('#admin').style.display='none'; openAdminGate(); };
+$('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); forceRefresh(); $('#admin').style.display='none'; openAdminGate(); };
 $('#adminGateBack').onclick=()=>{ closeAdminGate(); document.querySelector('.tab[data-tab="book"]')?.click(); window.scrollTo(0,0); };
 
 // services
@@ -300,9 +300,13 @@ $('#submit').onclick = async ()=>{
   $('#submit').disabled=true;
   const a = await addAppt({ date:sel.day, time:sel.time, barberId:sel.barber, serviceId:sel.service,
     name:$('#name').value.trim(), phone:$('#phone').value.trim() });
+  if(!a || a.error){
+    $('#result').innerHTML = `<div class="ok" style="border-color:rgba(220,90,90,.5)"><b>NIJE ZAKAZANO</b><br>${esc(a?.error||'Greška — pokušaj ponovo.')}</div>`;
+    check(); refreshSlots(); return;
+  }
   const b=barberById(sel.barber).name, s=serviceById(sel.service);
-  $('#result').innerHTML = `<div class="ok"><b>TERMIN ZAKAZAN</b><br>${a.name}, ${s.name} kod ${b}<br>
-    ${sel.day===todayStr()?'Danas':new Date(sel.day+'T12:00').toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'numeric'})} u ${a.time}. Vidimo se!</div>`;
+  $('#result').innerHTML = `<div class="ok"><b>TERMIN ZAKAZAN</b><br>${esc(a.name)}, ${esc(s.name)} kod ${esc(b)}<br>
+    ${sel.day===todayStr()?'Danas':new Date(sel.day+'T12:00').toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'numeric'})} u ${esc(a.time)}. Vidimo se!</div>`;
   sel.time=null; refreshSlots();
 };
 
@@ -311,12 +315,12 @@ function renderToday(){
   const list = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
   $('#todayList').innerHTML = list.length ? list.map(a=>{
     const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
-    const ph=getPhoto(a.name,a.phone);
-    const thumb = `<div class="thumb${ph?' has':''}" data-id="${a.id}" title="${ph?'Klikni da promeniš fotku':'Klikni da dodaš fotku'}">${
-      ph ? `<img src="${ph}" alt=""><span class="edit">✎</span>` : '＋'}</div>`;
-    return `<div class="item">${thumb}<div class="t">${a.time}</div>
-      <div><div class="who">${a.name}</div><div class="meta">${s} · ${b} · ${a.phone}${ph?' · 📸 ima prošlu fotku':''}</div></div>
-      <span class="x" onclick="removeAppt('${a.id}')">Obriši</span></div>`;
+    const ph=getPhoto(a);
+    const thumb = `<div class="thumb${ph?' has':''}" data-id="${esc(a.id)}" title="${ph?'Klikni da promeniš fotku':'Klikni da dodaš fotku'}">${
+      ph ? `<img src="${esc(ph)}" alt=""><span class="edit">✎</span>` : '＋'}</div>`;
+    return `<div class="item">${thumb}<div class="t">${esc(a.time)}</div>
+      <div><div class="who">${esc(a.name)}</div><div class="meta">${esc(s)} · ${esc(b)} · ${esc(a.phone||'')}${ph?' · 📸 ima prošlu fotku':''}</div></div>
+      <span class="x" onclick="removeAppt('${esc(a.id)}')">Obriši</span></div>`;
   }).join('') : '<div class="muted">Nema termina za danas.</div>';
 }
 $('#loadDemo').onclick = async ()=>{ await fetch('/api/demo',{method:'POST',headers:adminHeaders()}); renderToday(); };
@@ -330,26 +334,44 @@ $('#todayList').addEventListener('click', e=>{
   $('#rowFile').value='';
   $('#rowFile').click();
 });
-$('#rowFile').onchange = ()=>{
+// smanji fotku pre slanja (max 480px, JPEG) — 50-100× manje podataka u bazi i ka TV-u
+function resizePhoto(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{
+        const k=Math.min(1, 480/Math.max(im.width,im.height));
+        const c=document.createElement('canvas');
+        c.width=Math.round(im.width*k)||1; c.height=Math.round(im.height*k)||1;
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        resolve(c.toDataURL('image/jpeg',0.82));
+      };
+      im.onerror=reject; im.src=r.result;
+    };
+    r.onerror=reject; r.readAsDataURL(file);
+  });
+}
+$('#rowFile').onchange = async ()=>{
   const f=$('#rowFile').files[0]; if(!f||!pendingClient) return;
   const consent = confirm(`Da li je klijent (${pendingClient.name}) dao saglasnost za čuvanje i prikaz fotografije? (GDPR)`);
   if(!consent){ $('#rowResult').textContent='Fotka nije sačuvana — nema saglasnosti klijenta.'; pendingClient=null; return; }
-  const r=new FileReader();
-  r.onload=async ()=>{
-    const resp=await savePhoto(pendingClient.name, pendingClient.phone, r.result, true);
+  try{
+    const dataUrl=await resizePhoto(f);
+    const resp=await savePhoto(pendingClient.name, pendingClient.phone, dataUrl, true);
     $('#rowResult').textContent = resp.ok ? `✓ Fotka sačuvana za ${pendingClient.name} — pojaviće se na TV-u.` : 'Greška pri čuvanju fotke.';
-    pendingClient=null; renderToday();
-  };
-  r.readAsDataURL(f);
+  }catch(e){ $('#rowResult').textContent='Greška pri obradi fotke.'; }
+  pendingClient=null; renderToday();
 };
-$('#savePhoto').onclick = ()=>{
+$('#savePhoto').onclick = async ()=>{
   const f=$('#pFile').files[0]; if(!f||!$('#pName').value.trim()){ $('#pResult').textContent='Unesi ime i izaberi fotku.'; return; }
   if(!$('#pConsent').checked){ $('#pResult').textContent='Potvrdi saglasnost klijenta pre čuvanja fotke.'; return; }
-  const r=new FileReader(); r.onload=async ()=>{
-    const resp=await savePhoto($('#pName').value, $('#pPhone').value, r.result, true);
+  try{
+    const dataUrl=await resizePhoto(f);
+    const resp=await savePhoto($('#pName').value, $('#pPhone').value, dataUrl, true);
     $('#pResult').textContent = resp.ok ? '✓ Fotka sačuvana — pojaviće se na TV-u pri sledećoj poseti.' : 'Greška pri čuvanju fotke.';
     if(resp.ok) $('#pConsent').checked=false;
-  }; r.readAsDataURL(f);
+  }catch(e){ $('#pResult').textContent='Greška pri obradi fotke.'; }
 };
 
 // ── Obriši podatke klijenta (GDPR pravo na zaborav) ──
@@ -428,8 +450,9 @@ $('#aSubmit').onclick=async()=>{
   $('#aSubmit').disabled=true;
   const a=await addAppt({ date:asel.day, time:asel.time, barberId:asel.barber, serviceId:asel.service,
     name:$('#aName').value.trim(), phone:$('#aPhone').value.trim() });
+  if(!a || a.error){ $('#aResult').innerHTML='⚠ '+esc(a?.error||'Greška — pokušaj ponovo.'); aCheck(); aRefreshSlots(); return; }
   const b=barberById(asel.barber).name;
-  $('#aResult').innerHTML=`✓ Zakazano: ${a.name} kod ${b} u ${a.time} (${asel.day===todayStr()?'danas':asel.day})`;
+  $('#aResult').innerHTML=`✓ Zakazano: ${esc(a.name)} kod ${esc(b)} u ${esc(a.time)} (${asel.day===todayStr()?'danas':asel.day})`;
   $('#aName').value=''; $('#aPhone').value='';
   asel.time=null; aRefreshSlots(); aCheck(); renderToday();
 };
