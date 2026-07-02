@@ -107,9 +107,19 @@
     <div style="background:#15171f;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:26px 22px;width:min(360px,90vw);text-align:center">
       <div style="font-family:var(--display,sans-serif);font-size:22px;font-weight:700;color:var(--cream,#fff);letter-spacing:1px;margin-bottom:6px">ADMIN PRISTUP</div>
       <div class="muted" style="font-size:13px;margin-bottom:16px">Unesi lozinku za pristup admin panelu.</div>
-      <input id="adminPassInput" type="password" placeholder="Lozinka" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:6px">
-      <div id="adminGateErr" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
-      <button class="btn" id="adminLoginBtn" style="width:100%">Prijavi se</button>
+      <div id="loginBox">
+        <input id="adminPassInput" type="password" placeholder="Lozinka" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:6px">
+        <div id="adminGateErr" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
+        <button class="btn" id="adminLoginBtn" style="width:100%">Prijavi se</button>
+        <button id="adminForgot" style="margin-top:12px;background:none;border:none;color:var(--mut,#9a958c);font-size:13px;cursor:pointer;text-decoration:underline">Zaboravljena lozinka?</button>
+      </div>
+      <div id="resetBox" style="display:none">
+        <div class="muted" style="font-size:13px;margin-bottom:10px">Postavi novu admin lozinku.</div>
+        <input id="rPass" type="password" placeholder="Nova lozinka (min. 8 karaktera)" autocomplete="new-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:8px">
+        <input id="rPass2" type="password" placeholder="Ponovi novu lozinku" autocomplete="new-password" style="width:100%;box-sizing:border-box;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:10px;color:var(--cream,#fff);font-size:16px;margin-bottom:6px">
+        <div id="rErr" style="color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
+        <button class="btn" id="rSaveBtn" style="width:100%">Postavi novu lozinku</button>
+      </div>
       <button id="adminGateBack" style="margin-top:12px;background:none;border:none;color:var(--mut,#9a958c);font-size:13px;cursor:pointer;text-decoration:underline">← Nazad na zakazivanje</button>
     </div>
   </div>
@@ -196,6 +206,13 @@
       <button class="btn ghost" id="changePassBtn" style="margin-top:10px">Sačuvaj novu lozinku</button>
       <div id="passResult" class="muted"></div>
     </form>
+
+    <div class="muted" style="text-align:left;padding:14px 0 0;font-size:13px">
+      <b style="color:var(--cream)">Email za oporavak</b> — ako zaboraviš lozinku, na ovaj email stiže link za reset.
+    </div>
+    <div class="row" style="margin-top:8px"><input id="recEmail" type="email" placeholder="npr. vlasnik@gmail.com" autocomplete="email"></div>
+    <button class="btn ghost" id="saveRecEmail" style="margin-top:10px">Sačuvaj email za oporavak</button>
+    <div id="recResult" class="muted"></div>
   </div>
 
   <!-- BREAKS (in admin, rendered by JS) -->
@@ -238,7 +255,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t=>{
     t.classList.add('sel');
     $('#book').style.display = t.dataset.tab==='book'?'block':'none';
     if(t.dataset.tab==='admin'){
-      if(isAdminAuthed()){ $('#admin').style.display='block'; renderToday(); aRefreshSlots(); renderBreaks(); }
+      if(isAdminAuthed()){ $('#admin').style.display='block'; renderToday(); aRefreshSlots(); renderBreaks(); loadRecEmail(); }
       else { $('#admin').style.display='none'; openAdminGate(); }
     } else {
       $('#admin').style.display='none';
@@ -248,13 +265,13 @@ document.querySelectorAll('.tab[data-tab]').forEach(t=>{
 
 // ── Admin login gate ──
 function isAdminAuthed(){ return !!localStorage.getItem('adminPass'); }
-function openAdminGate(){ $('#adminGate').style.display='flex'; $('#adminPassInput').value=''; $('#adminGateErr').textContent=''; setTimeout(()=>$('#adminPassInput').focus(),50); }
+function openAdminGate(){ $('#adminGate').style.display='flex'; $('#adminPassInput').value=''; $('#adminGateErr').textContent=''; $('#adminGateErr').style.color=''; setTimeout(()=>$('#adminPassInput').focus(),50); }
 function closeAdminGate(){ $('#adminGate').style.display='none'; }
 async function adminLogin(){
   const pass=$('#adminPassInput').value;
   try{
     const r=await fetch('/api/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
-    if(r.ok){ localStorage.setItem('adminPass',pass); closeAdminGate(); $('#admin').style.display='block'; await forceRefresh(); renderToday(); aRefreshSlots(); renderBreaks(); }
+    if(r.ok){ localStorage.setItem('adminPass',pass); closeAdminGate(); $('#admin').style.display='block'; await forceRefresh(); renderToday(); aRefreshSlots(); renderBreaks(); loadRecEmail(); }
     else { $('#adminGateErr').textContent='Pogrešna lozinka.'; }
   }catch(e){ $('#adminGateErr').textContent='Greška u konekciji.'; }
 }
@@ -395,6 +412,61 @@ $('#delClientBtn').onclick = async ()=>{
   const r=await fetch('/api/client',{method:'DELETE',headers:adminHeaders({'Content-Type':'application/json'}),body:JSON.stringify({name,phone})});
   if(r.ok){ $('#delResult').textContent=`✓ Svi podaci za ${name||phone} su trajno obrisani.`; $('#delName').value=''; $('#delPhone').value=''; renderToday(); }
   else { const e=await r.json().catch(()=>({})); $('#delResult').textContent='Greška: '+(e.error||'brisanje nije uspelo.'); }
+};
+
+// ── Zaboravljena lozinka (email reset) ──
+const _resetToken = new URLSearchParams(location.search).get('reset');
+if(_resetToken){
+  $('#adminGate').style.display='flex';
+  $('#loginBox').style.display='none';
+  $('#resetBox').style.display='block';
+  setTimeout(()=>$('#rPass').focus(),50);
+}
+$('#adminForgot').onclick = async ()=>{
+  $('#adminForgot').disabled=true;
+  try{
+    const r=await fetch('/api/admin-forgot',{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    $('#adminGateErr').style.color = r.ok ? '#7fd18a' : '';
+    $('#adminGateErr').textContent = r.ok ? `✓ Link za reset je poslat na ${d.hint||'email vlasnika'} (važi 30 min).` : (d.error||'Greška.');
+  }catch(e){ $('#adminGateErr').textContent='Greška u konekciji.'; }
+  $('#adminForgot').disabled=false;
+};
+$('#rSaveBtn').onclick = async ()=>{
+  const np=$('#rPass').value, np2=$('#rPass2').value;
+  if(np.length<8){ $('#rErr').textContent='Lozinka mora imati bar 8 karaktera.'; return; }
+  if(np!==np2){ $('#rErr').textContent='Lozinke se ne poklapaju.'; return; }
+  $('#rSaveBtn').disabled=true;
+  try{
+    const r=await fetch('/api/admin-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:_resetToken,newPassword:np})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){
+      localStorage.setItem('adminPass',np);
+      history.replaceState(null,'',location.pathname);   // skloni token iz URL-a
+      $('#resetBox').style.display='none'; $('#loginBox').style.display='block';
+      closeAdminGate(); $('#admin').style.display='block';
+      await forceRefresh(); renderToday(); aRefreshSlots(); renderBreaks(); loadRecEmail();
+    } else $('#rErr').textContent=d.error||'Greška.';
+  }catch(e){ $('#rErr').textContent='Greška u konekciji.'; }
+  $('#rSaveBtn').disabled=false;
+};
+
+// ── Email za oporavak lozinke ──
+async function loadRecEmail(){
+  try{
+    const r=await fetch('/api/admin-recovery-email',{headers:adminHeaders()});
+    const d=await r.json().catch(()=>({}));
+    if(d.email) $('#recEmail').value=d.email;
+  }catch(e){}
+}
+$('#saveRecEmail').onclick = async ()=>{
+  $('#saveRecEmail').disabled=true;
+  try{
+    const r=await fetch('/api/admin-recovery-email',{method:'POST',headers:adminHeaders({'Content-Type':'application/json'}),body:JSON.stringify({email:$('#recEmail').value})});
+    const d=await r.json().catch(()=>({}));
+    $('#recResult').textContent = r.ok ? '✓ Email sačuvan — na njega stiže link za reset lozinke.' : ('Greška: '+(d.error||''));
+  }catch(e){ $('#recResult').textContent='Greška u konekciji.'; }
+  $('#saveRecEmail').disabled=false;
 };
 
 // ── Promena admin lozinke ──

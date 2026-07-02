@@ -31,20 +31,50 @@ function checkPass(pass, stored) {
   if (!salt || !hash) return false;
   return safeEq(crypto.scryptSync(String(pass), salt, 32).toString("hex"), hash);
 }
+// --- Settings (ključ/vrednost): Supabase settings tabela / data.json lokal ---
+async function getSetting(key) {
+  try {
+    if (supabase) {
+      const { data } = await supabase.from("settings").select("value").eq("key", key).maybeSingle();
+      return data ? data.value : null;
+    }
+    return (fileLoad().settings || {})[key] || null;
+  } catch (e) { return null; }
+}
+async function setSetting(key, value) {
+  if (supabase) {
+    const { error } = value === null
+      ? await supabase.from("settings").delete().eq("key", key)
+      : await supabase.from("settings").upsert({ key, value });
+    if (error) throw new Error(error.message + " (proveri da tabela 'settings' postoji — supabase-schema.sql)");
+  } else {
+    const d = fileLoad(); d.settings = d.settings || {};
+    if (value === null) delete d.settings[key]; else d.settings[key] = value;
+    fileSave(d);
+  }
+}
 let _passCache = { v: null, t: 0 };
 async function storedPassHash() {
   if (Date.now() - _passCache.t < 60000) return _passCache.v;
-  let v = null;
-  try {
-    if (supabase) {
-      const { data } = await supabase.from("settings").select("value").eq("key", "admin_pass").maybeSingle();
-      v = data ? data.value : null;
-    } else {
-      v = (fileLoad().settings || {}).admin_pass || null;
-    }
-  } catch (e) { v = null; }
+  const v = await getSetting("admin_pass");
   _passCache = { v, t: Date.now() };
   return v;
+}
+
+// --- Slanje mejla (Resend API) — za reset zaboravljene lozinke ---
+async function sendMail(to, subject, html) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { error: "RESEND_API_KEY nije postavljen (Vercel env var)" };
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.EMAIL_FROM || "Barbershop <onboarding@resend.dev>",
+        to: [to], subject, html }),
+    });
+    if (!r.ok) return { error: (await r.text()).slice(0, 200) };
+    return { ok: true };
+  } catch (e) { return { error: e.message }; }
 }
 async function verifyPass(pass) {
   const stored = await storedPassHash();
@@ -235,6 +265,7 @@ function clientKey(name, phone) { return (name || "").trim().toLowerCase() + "|"
 // --- SSE ---
 const clients = [];
 const loginFails = new Map(); // ip → { n, t } za rate limit logina/promene lozinke
+let _lastForgot = 0;          // globalni cooldown slanja reset mejla (anti-spam)
 function loginRec(req) {
   const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
   const rec = loginFails.get(ip) || { n: 0, t: Date.now() };
@@ -315,12 +346,70 @@ async function handler(req, res) {
     if (np.length < 8) return json(res, 400, { error: "Nova lozinka mora imati bar 8 karaktera." });
     if (np.length > 100) return json(res, 400, { error: "Nova lozinka je predugačka (max 100)." });
     const hash = hashPass(np);
-    if (supabase) {
-      const { error } = await supabase.from("settings").upsert({ key: "admin_pass", value: hash });
-      if (error) return json(res, 500, { error: "Baza: " + error.message + " (proveri da tabela 'settings' postoji — supabase-schema.sql)" });
-    } else {
-      const d = fileLoad(); d.settings = d.settings || {}; d.settings.admin_pass = hash; fileSave(d);
+    try { await setSetting("admin_pass", hash); }
+    catch (e) { return json(res, 500, { error: "Baza: " + e.message }); }
+    _passCache = { v: hash, t: Date.now() };
+    return json(res, 200, { ok: true });
+  }
+
+  // ── /api/admin-recovery-email GET/POST (admin podešava email za oporavak) ──
+  if (p === "/api/admin-recovery-email") {
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
+    if (req.method === "GET") return json(res, 200, { email: await getSetting("admin_email") });
+    if (req.method === "POST") {
+      const { email } = await body(req);
+      const e = String(email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) || e.length > 120)
+        return json(res, 400, { error: "Neispravan email." });
+      try { await setSetting("admin_email", e); }
+      catch (err) { return json(res, 500, { error: "Baza: " + err.message }); }
+      return json(res, 200, { ok: true });
     }
+  }
+
+  // ── /api/admin-forgot POST (javno — šalje reset link na email vlasnika) ──
+  if (p === "/api/admin-forgot" && req.method === "POST") {
+    const rec = loginRec(req);
+    if (rec.n >= 5) return json(res, 429, { error: "Previše pokušaja. Sačekaj 10 minuta." });
+    rec.n++;
+    const email = await getSetting("admin_email");
+    if (!email) return json(res, 400, { error: "Email za oporavak nije podešen — kontaktiraj podršku." });
+    if (Date.now() - _lastForgot < 60000)
+      return json(res, 429, { error: "Link je nedavno poslat — proveri inbox i spam, pa pokušaj za minut." });
+    const token = crypto.randomBytes(32).toString("hex");
+    const exp = Date.now() + 30 * 60000; // važi 30 min
+    try { await setSetting("admin_reset", crypto.createHash("sha256").update(token).digest("hex") + ":" + exp); }
+    catch (e) { return json(res, 500, { error: "Baza: " + e.message }); }
+    const proto = req.headers["x-forwarded-proto"] || "http";
+    const link = proto + "://" + req.headers.host + "/?reset=" + token;
+    const sent = await sendMail(email, "Reset admin lozinke — Barbershop",
+      `<p>Zatražen je reset admin lozinke za tvoj salon.</p>
+       <p><a href="${link}" style="display:inline-block;padding:12px 20px;background:#16306B;color:#fff;text-decoration:none;border-radius:8px">Postavi novu lozinku</a></p>
+       <p style="color:#666;font-size:13px">Link važi 30 minuta. Ako ovo nisi tražio, slobodno ignoriši poruku — lozinka ostaje ista.</p>`);
+    if (sent.error) return json(res, 500, { error: "Slanje mejla nije uspelo: " + sent.error });
+    _lastForgot = Date.now();
+    // hint: maskiran email da vlasnik zna gde je link otišao, a da se email ne otkriva
+    return json(res, 200, { ok: true, hint: email.replace(/^(.).*(@.*)$/, "$1***$2") });
+  }
+
+  // ── /api/admin-reset POST (postavlja novu lozinku uz token iz mejla) ──
+  if (p === "/api/admin-reset" && req.method === "POST") {
+    const rec = loginRec(req);
+    if (rec.n >= 10) return json(res, 429, { error: "Previše pokušaja. Sačekaj 10 minuta." });
+    const { token, newPassword } = await body(req);
+    const stored = String(await getSetting("admin_reset") || "");
+    const [h, exp] = stored.split(":");
+    const th = crypto.createHash("sha256").update(String(token || "")).digest("hex");
+    if (!h || !safeEq(th, h) || Date.now() > Number(exp)) {
+      rec.n++;
+      return json(res, 400, { error: "Link je nevažeći ili je istekao. Zatraži novi na 'Zaboravljena lozinka?'." });
+    }
+    const np = String(newPassword || "");
+    if (np.length < 8) return json(res, 400, { error: "Nova lozinka mora imati bar 8 karaktera." });
+    if (np.length > 100) return json(res, 400, { error: "Nova lozinka je predugačka (max 100)." });
+    const hash = hashPass(np);
+    try { await setSetting("admin_pass", hash); await setSetting("admin_reset", null); }
+    catch (e) { return json(res, 500, { error: "Baza: " + e.message }); }
     _passCache = { v: hash, t: Date.now() };
     return json(res, 200, { ok: true });
   }
