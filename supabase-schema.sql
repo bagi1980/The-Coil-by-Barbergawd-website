@@ -33,6 +33,12 @@ create table if not exists photos (
 alter table photos add column if not exists consent boolean default false;
 alter table photos add column if not exists consent_date bigint;
 
+-- Podešavanja aplikacije (npr. admin lozinka koju vlasnik menja iz admin panela)
+create table if not exists settings (
+  key   text primary key,
+  value text not null
+);
+
 -- Indeksi za brže upite
 create index if not exists appointments_date_idx on appointments(date);
 create index if not exists breaks_date_idx on breaks(date);

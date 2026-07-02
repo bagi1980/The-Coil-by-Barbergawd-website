@@ -19,7 +19,39 @@ function safeEq(a, b) {
   const x = Buffer.from(String(a || "")), y = Buffer.from(String(b || ""));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
-function isAdmin(req) { return !!ADMIN_PASSWORD && safeEq(req.headers["x-admin-pass"], ADMIN_PASSWORD); }
+
+// Lozinka koju vlasnik postavi iz admin panela čuva se kao scrypt hash ("salt:hash")
+// u settings tabeli (Supabase) / data.json (lokal). Env ADMIN_PASSWORD je samo početna.
+function hashPass(pass) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return salt + ":" + crypto.scryptSync(String(pass), salt, 32).toString("hex");
+}
+function checkPass(pass, stored) {
+  const [salt, hash] = String(stored).split(":");
+  if (!salt || !hash) return false;
+  return safeEq(crypto.scryptSync(String(pass), salt, 32).toString("hex"), hash);
+}
+let _passCache = { v: null, t: 0 };
+async function storedPassHash() {
+  if (Date.now() - _passCache.t < 60000) return _passCache.v;
+  let v = null;
+  try {
+    if (supabase) {
+      const { data } = await supabase.from("settings").select("value").eq("key", "admin_pass").maybeSingle();
+      v = data ? data.value : null;
+    } else {
+      v = (fileLoad().settings || {}).admin_pass || null;
+    }
+  } catch (e) { v = null; }
+  _passCache = { v, t: Date.now() };
+  return v;
+}
+async function verifyPass(pass) {
+  const stored = await storedPassHash();
+  if (stored) return checkPass(pass, stored);
+  return !!ADMIN_PASSWORD && safeEq(pass, ADMIN_PASSWORD);
+}
+function isAdmin(req) { return verifyPass(req.headers["x-admin-pass"] || ""); } // → Promise<boolean>
 
 // Javni photo ključ — hash od "ime|telefon" da se telefoni ne otkrivaju javnom API-ju
 function pkey(k) { return crypto.createHash("sha256").update("pk1:" + k).digest("hex").slice(0, 20); }
@@ -190,18 +222,26 @@ function fileLoad() {
   d.breaks = (d.breaks || []).filter(b => b && b.date >= today);
   d.photos = d.photos || {};
   d.consents = d.consents || {};
+  d.settings = d.settings || {};
   if (!d.photoVers) { d.photoVers = {}; for (const k of Object.keys(d.photos)) d.photoVers[k] = 1; }
   return d;
 }
 function fileSave(d) {
   fs.writeFileSync(DB, JSON.stringify({ appointments: d.appointments || [], photos: d.photos || {},
-    photoVers: d.photoVers || {}, breaks: d.breaks || [], consents: d.consents || {} }, null, 2));
+    photoVers: d.photoVers || {}, breaks: d.breaks || [], consents: d.consents || {}, settings: d.settings || {} }, null, 2));
 }
 function clientKey(name, phone) { return (name || "").trim().toLowerCase() + "|" + (phone || "").trim(); }
 
 // --- SSE ---
 const clients = [];
-const loginFails = new Map(); // ip → { n, t } za rate limit logina
+const loginFails = new Map(); // ip → { n, t } za rate limit logina/promene lozinke
+function loginRec(req) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  const rec = loginFails.get(ip) || { n: 0, t: Date.now() };
+  if (Date.now() - rec.t > 600000) { rec.n = 0; rec.t = Date.now(); }
+  loginFails.set(ip, rec);
+  return rec;
+}
 function broadcast() { clients.forEach(res => { try { res.write("data: update\n\n"); } catch {} }); }
 
 function body(req) {
@@ -231,7 +271,7 @@ async function handler(req, res) {
   if (p === "/api/cleanup" && (req.method === "GET" || req.method === "POST")) {
     const auth = req.headers["authorization"] || "";
     const cronOk = process.env.CRON_SECRET && auth === "Bearer " + process.env.CRON_SECRET;
-    if (!cronOk && !isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!cronOk && !(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const cutoff = CUTOFF_DATE();
     let removed = 0;
     if (supabase) {
@@ -252,20 +292,42 @@ async function handler(req, res) {
 
   // ── /api/admin-login POST (rate limit protiv pogađanja lozinke) ──
   if (p === "/api/admin-login" && req.method === "POST") {
-    if (!ADMIN_PASSWORD) return json(res, 503, { ok: false, error: "Admin nije konfigurisan." });
-    const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
-    const rec = loginFails.get(ip) || { n: 0, t: Date.now() };
-    if (Date.now() - rec.t > 600000) { rec.n = 0; rec.t = Date.now(); }
+    if (!ADMIN_PASSWORD && !(await storedPassHash()))
+      return json(res, 503, { ok: false, error: "Admin nije konfigurisan." });
+    const rec = loginRec(req);
     if (rec.n >= 10) return json(res, 429, { ok: false, error: "Previše pokušaja. Sačekaj 10 minuta." });
     const { password } = await body(req);
-    const ok = safeEq(password, ADMIN_PASSWORD);
-    if (!ok) { rec.n++; loginFails.set(ip, rec); }
+    const ok = await verifyPass(password || "");
+    if (!ok) rec.n++;
     return json(res, ok ? 200 : 401, { ok });
+  }
+
+  // ── /api/admin-password POST (vlasnik menja lozinku iz admin panela) ──
+  if (p === "/api/admin-password" && req.method === "POST") {
+    const rec = loginRec(req);
+    if (rec.n >= 10) return json(res, 429, { error: "Previše pokušaja. Sačekaj 10 minuta." });
+    const { oldPassword, newPassword } = await body(req);
+    if (!(await verifyPass(oldPassword || ""))) {
+      rec.n++;
+      return json(res, 401, { error: "Pogrešna trenutna lozinka." });
+    }
+    const np = String(newPassword || "");
+    if (np.length < 8) return json(res, 400, { error: "Nova lozinka mora imati bar 8 karaktera." });
+    if (np.length > 100) return json(res, 400, { error: "Nova lozinka je predugačka (max 100)." });
+    const hash = hashPass(np);
+    if (supabase) {
+      const { error } = await supabase.from("settings").upsert({ key: "admin_pass", value: hash });
+      if (error) return json(res, 500, { error: "Baza: " + error.message + " (proveri da tabela 'settings' postoji — supabase-schema.sql)" });
+    } else {
+      const d = fileLoad(); d.settings = d.settings || {}; d.settings.admin_pass = hash; fileSave(d);
+    }
+    _passCache = { v: hash, t: Date.now() };
+    return json(res, 200, { ok: true });
   }
 
   // ── /api/state (javno: bez telefona; admin sa x-admin-pass dobija i telefone) ──
   if (p === "/api/state" && req.method === "GET") {
-    const admin = isAdmin(req);
+    const admin = await isAdmin(req);
     if (supabase) {
       const d = await sbLoad();
       return json(res, 200, publicState(d, admin));
@@ -306,7 +368,7 @@ async function handler(req, res) {
 
   // ── /api/appointments/:id DELETE ──
   if (p.startsWith("/api/appointments/") && req.method === "DELETE") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const id = p.split("/").pop();
     if (supabase) { await sbRemoveAppt(id); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad(); d.appointments = d.appointments.filter(x => x.id !== id);
@@ -315,7 +377,7 @@ async function handler(req, res) {
 
   // ── /api/client DELETE (GDPR pravo na zaborav) ──
   if (p === "/api/client" && req.method === "DELETE") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const { name, phone } = await body(req);
     if (!phone || !phone.trim()) return json(res, 400, { error: "Telefon je obavezan." });
     const ph = phone.trim();
@@ -343,7 +405,7 @@ async function handler(req, res) {
 
   // ── /api/breaks POST ──
   if (p === "/api/breaks" && req.method === "POST") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const raw = await body(req);
     const b = { barberId: raw.barberId, date: raw.date, startTime: raw.startTime, endTime: raw.endTime };
     if (!/^b\d{1,3}$/.test(b.barberId || "") || !/^\d{4}-\d{2}-\d{2}$/.test(b.date || "")
@@ -357,7 +419,7 @@ async function handler(req, res) {
 
   // ── /api/breaks/:id DELETE ──
   if (p.startsWith("/api/breaks/") && req.method === "DELETE") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const id = p.split("/").pop();
     if (supabase) { await sbRemoveBreak(id); broadcast(); return json(res, 200, { ok: true }); }
     const d = fileLoad(); d.breaks = (d.breaks || []).filter(x => x.id !== id);
@@ -375,7 +437,7 @@ async function handler(req, res) {
 
   // ── /api/photos POST ──
   if (p === "/api/photos" && req.method === "POST") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const { name, phone, dataUrl, consent } = await body(req);
     if (!consent) return json(res, 400, { error: "Nedostaje saglasnost klijenta za čuvanje fotografije." });
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 2e6)
@@ -402,7 +464,7 @@ async function handler(req, res) {
 
   // ── /api/demo POST ──
   if (p === "/api/demo" && req.method === "POST") {
-    if (!isAdmin(req)) return json(res, 401, { error: "Neautorizovano" });
+    if (!(await isAdmin(req))) return json(res, 401, { error: "Neautorizovano" });
     const today = TODAY();
     const at = min => {
       const d = new Date(Date.now() + min * 60000);
@@ -423,7 +485,8 @@ async function handler(req, res) {
       await sbLoadDemo(appointments, photos);
       broadcast(); return json(res, 200, { ok: true });
     }
-    const d = { appointments, photos, photoVers: {}, breaks: [] };
+    // demo resetuje termine/fotke, ali čuva settings (npr. promenjenu admin lozinku)
+    const d = { appointments, photos, photoVers: {}, breaks: [], settings: fileLoad().settings };
     for (const [k] of Object.entries(photos)) d.photoVers[k] = Date.now();
     fileSave(d); broadcast(); return json(res, 200, { ok: true });
   }

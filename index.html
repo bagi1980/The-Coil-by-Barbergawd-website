@@ -183,6 +183,19 @@
     <div class="row" style="margin-top:10px"><input id="delPhone" placeholder="Telefon klijenta (obavezno)"></div>
     <button class="btn ghost" id="delClientBtn" style="margin-top:10px;border-color:rgba(230,57,80,.5);color:var(--red2)">Obriši sve podatke klijenta</button>
     <div id="delResult" class="muted"></div>
+
+    <div class="section" data-n="•">Promeni admin lozinku</div>
+    <div class="muted" style="text-align:left;padding:0 0 12px;font-size:13px">
+      Browser će ti ponuditi jaku lozinku i sam je zapamtiti. Nova lozinka važi odmah, na svim uređajima.
+    </div>
+    <form id="passForm" autocomplete="on" onsubmit="return false">
+      <input type="text" name="username" value="admin" autocomplete="username" readonly style="display:none">
+      <div class="row"><input id="curPass" type="password" placeholder="Trenutna lozinka" autocomplete="current-password"></div>
+      <div class="row" style="margin-top:10px"><input id="newPass" type="password" placeholder="Nova lozinka (min. 8 karaktera)" autocomplete="new-password"></div>
+      <div class="row" style="margin-top:10px"><input id="newPass2" type="password" placeholder="Ponovi novu lozinku" autocomplete="new-password"></div>
+      <button class="btn ghost" id="changePassBtn" style="margin-top:10px">Sačuvaj novu lozinku</button>
+      <div id="passResult" class="muted"></div>
+    </form>
   </div>
 
   <!-- BREAKS (in admin, rendered by JS) -->
@@ -382,6 +395,24 @@ $('#delClientBtn').onclick = async ()=>{
   const r=await fetch('/api/client',{method:'DELETE',headers:adminHeaders({'Content-Type':'application/json'}),body:JSON.stringify({name,phone})});
   if(r.ok){ $('#delResult').textContent=`✓ Svi podaci za ${name||phone} su trajno obrisani.`; $('#delName').value=''; $('#delPhone').value=''; renderToday(); }
   else { const e=await r.json().catch(()=>({})); $('#delResult').textContent='Greška: '+(e.error||'brisanje nije uspelo.'); }
+};
+
+// ── Promena admin lozinke ──
+$('#changePassBtn').onclick = async ()=>{
+  const cur=$('#curPass').value, np=$('#newPass').value, np2=$('#newPass2').value;
+  if(np.length<8){ $('#passResult').textContent='Nova lozinka mora imati bar 8 karaktera.'; return; }
+  if(np!==np2){ $('#passResult').textContent='Nove lozinke se ne poklapaju.'; return; }
+  $('#changePassBtn').disabled=true;
+  try{
+    const r=await fetch('/api/admin-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldPassword:cur,newPassword:np})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){
+      localStorage.setItem('adminPass',np);   // ostani ulogovan sa novom lozinkom
+      $('#passResult').textContent='✓ Lozinka promenjena — browser će ponuditi da je zapamti.';
+      $('#curPass').value=$('#newPass').value=$('#newPass2').value='';
+    } else $('#passResult').textContent='Greška: '+(d.error||'promena nije uspela.');
+  }catch(e){ $('#passResult').textContent='Greška u konekciji.'; }
+  $('#changePassBtn').disabled=false;
 };
 
 // ── Procena čekanja ──
