@@ -9,6 +9,10 @@ npm-debug.log*
 .env
 .env.local
 
+# Backup — lični podaci klijenata, nikad u git
+backups/
+backup-config.json
+
 # OS files
 .DS_Store
 

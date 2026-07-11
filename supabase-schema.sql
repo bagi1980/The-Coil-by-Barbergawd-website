@@ -42,3 +42,10 @@ create table if not exists settings (
 -- Indeksi za brže upite
 create index if not exists appointments_date_idx on appointments(date);
 create index if not exists breaks_date_idx on breaks(date);
+
+-- Row-Level Security: server koristi SERVICE key (zaobilazi RLS),
+-- pa RLS bez ijedne policy znači: anon/public pristup = blokiran, server = radi normalno.
+alter table appointments enable row level security;
+alter table breaks       enable row level security;
+alter table photos       enable row level security;
+alter table settings     enable row level security;

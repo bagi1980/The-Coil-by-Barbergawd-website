@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.js"],
       "port": 8091
+    },
+    {
+      "name": "fade-factory",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["../fade-factory-demo/server.js"],
+      "port": 8091
     }
   ]
 }
