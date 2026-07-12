@@ -159,7 +159,19 @@ async function sbLoad() {
 }
 
 // Javni oblik state odgovora: photoKey umesto telefona; telefon samo za admina
+// Vremenska zona salona — TV-i često imaju pogrešno podešen sat/zonu, pa klijenti
+// računaju "sada" iz serverskog vremena + ovog ofseta (vidi salonNow() u api.js).
+const SALON_TZ = process.env.SALON_TZ || "Europe/Belgrade";
+function tzOffsetMin(now) {
+  try {
+    const loc = new Date(now.toLocaleString("en-US", { timeZone: SALON_TZ }));
+    const utc = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
+    return Math.round((loc - utc) / 60000);
+  } catch (e) { return 120; } // fallback: CEST
+}
+
 function publicState(d, admin) {
+  const now = new Date();
   return {
     appointments: (d.appointments || []).map(a => {
       const out = { id: a.id, date: a.date, time: a.time, barberId: a.barberId, serviceId: a.serviceId,
@@ -169,6 +181,8 @@ function publicState(d, admin) {
     }),
     breaks: d.breaks || [],
     photoVers: d.photoVers || {},
+    now: now.getTime(),
+    tzOffsetMin: tzOffsetMin(now),
   };
 }
 

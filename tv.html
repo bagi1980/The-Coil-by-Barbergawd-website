@@ -506,7 +506,7 @@
   })();
 </script>
 <script>window.POLL_MS = 3000;</script>
-<script src="api.js?v=4"></script>
+<script src="api.js?v=5"></script>
 <script>
 // VAŽNO: ES5 sintaksa u celom skriptu — stari TV browseri (Tizen/webOS) padaju na ?. ?? let/const/async/`…`
 function $(s){ return document.querySelector(s); }
@@ -523,7 +523,7 @@ $('#ticker').innerHTML = (function(){
 
 // ── Sat ──
 function tick(){
-  var d=new Date();
+  var d=salonNow();
   var hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
   $('#clock').innerHTML=hh+'<span>:</span>'+mm;
   try{ $('#date').textContent=d.toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
@@ -576,13 +576,13 @@ function preloadDemoPhotos(done){
 function demoToday(){
   var openM=SALON.hours.open*60, closeM=SALON.hours.close*60;
   var slot=SALON.slotMin||30, n=DEMO_CLIENTS.length;
-  var nowM=new Date().getHours()*60+new Date().getMinutes();
+  var nowM=salonNow().getHours()*60+salonNow().getMinutes();
   // Termini na mreži od pola sata (kao na zakazivanju): prvi = trenutni slot (u stolici), ostali nadolazeći
   var curSlot=Math.floor(nowM/slot)*slot;
   var start=Math.max(openM, Math.min(curSlot, closeM-slot*(n-1)));
   return DEMO_CLIENTS.map(function(c,i){
     var t=start+i*slot;
-    return { id:'demo'+i, date:todayStr(),
+    return { id:'demo'+i, date:todayStr(salonNow()),
       time:String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),
       name:c.name, phone:'', serviceId:c.serviceId, barberId:c.barberId, _photo:c._photo };
   });
@@ -592,8 +592,8 @@ function photoOf(a){ return (a && a._photo) || getPhoto(a); }
 // ── Stanje sesije ──
 var _demoMode=false;
 function getSessionState(){
-  var now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
-  var today=loadAppts().filter(function(a){ return a.date===todayStr(); })
+  var now=salonNow(), nowMins=now.getHours()*60+now.getMinutes();
+  var today=loadAppts().filter(function(a){ return a.date===todayStr(salonNow()); })
     .sort(function(x,y){ return x.time.localeCompare(y.time); });
   _demoMode=false;
   if(!today.length){ today=demoToday(); _demoMode=true; }   // nema pravih → virtualni klijenti
@@ -756,17 +756,17 @@ function showWelcome(a){
 }
 function checkWelcome(d){
   var t=d.toTimeString().slice(0,5);
-  loadAppts().filter(function(a){ return a.date===todayStr()&&a.time===t&&!a.greeted; }).forEach(function(a){
+  loadAppts().filter(function(a){ return a.date===todayStr(salonNow())&&a.time===t&&!a.greeted; }).forEach(function(a){
     a.greeted=true;
     fetch('/api/appointments/greet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})});
     showWelcome(a);
   });
 }
 
-onData(renderQueue);
+onData(function(){ renderQueue(); checkClosed(); });
 
 $('#demo').onclick=function(){
-  var list=loadAppts().filter(function(a){ return a.date===todayStr(); })
+  var list=loadAppts().filter(function(a){ return a.date===todayStr(salonNow()); })
     .sort(function(x,y){ return x.time.localeCompare(y.time); });
   showWelcome(list[0]||{name:'Test Klijent',phone:''});
 };
@@ -801,19 +801,19 @@ $('#demo').onclick=function(){
     var name=$('#wiName').value.trim();
     if(!name||!wiService||!wiBarber) return;
     // Nađi prvi slobodan slot od sada
-    var free=freeSlots(todayStr(),wiBarber);
-    var now=new Date(), nowStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    var free=freeSlots(todayStr(salonNow()),wiBarber);
+    var now=salonNow(), nowStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
     var slot=free.find(function(t){ return t>=nowStr; })||free[0];
     if(!slot){ alert('Nema slobodnih termina za danas.'); return; }
     $('#wiOk').disabled=true;
-    addAppt({date:todayStr(),time:slot,barberId:wiBarber,serviceId:wiService,name:name,phone:'walk-in'})
+    addAppt({date:todayStr(salonNow()),time:slot,barberId:wiBarber,serviceId:wiService,name:name,phone:'walk-in'})
       .then(closeWi,closeWi);
   };
 })();
 
 // ── Closed mode ──
 function checkClosed(){
-  var h=new Date().getHours();
+  var h=salonNow().getHours();
   var closed=h<SALON.hours.open||h>=SALON.hours.close;
   setCls(document.documentElement,'tv-closed',closed);
   setCls($('#closedWrap'),'on',closed);

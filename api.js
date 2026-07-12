@@ -10,6 +10,20 @@ function toMins(t) {
   var p = (t || '0:0').split(':');
   return Number(p[0]) * 60 + Number(p[1]);
 }
+
+// ── Tačno vreme salona ──
+// TV-i često imaju pogrešan sat ili zonu (npr. UTC → kasni 2h). Server uz /api/state
+// šalje svoje vreme (now) i ofset zone salona (tzOffsetMin); iz toga računamo "sada"
+// nezavisno od sata uređaja. Pre prvog odgovora: vreme uređaja.
+var _clockSkewMs = 0;      // server UTC − uređaj UTC
+var _tzOffsetMin = null;   // zona salona u minutima od UTC (null = još ne znamo)
+function salonNow() {
+  var utc = Date.now() + _clockSkewMs;
+  if (_tzOffsetMin === null) return new Date(utc);
+  // pomerena Date: getHours()/getMinutes() prikazuju zidno vreme salona na bilo kom uređaju
+  var approx = new Date(utc);
+  return new Date(utc + (_tzOffsetMin + approx.getTimezoneOffset()) * 60000);
+}
 function loadAppts() { return _state.appointments; }
 function loadBreaks() { return _state.breaks; }
 // fotke su keširane po photoKey (hash sa servera — telefon se ne otkriva javno)
@@ -26,6 +40,10 @@ function _refresh() {
     .then(function (r) { return r.json(); })
     .then(function (s) {
       _loaded = true;
+      if (typeof s.now === 'number') {
+        _clockSkewMs = s.now - Date.now();
+        _tzOffsetMin = (typeof s.tzOffsetMin === 'number') ? s.tzOffsetMin : null;
+      }
       var pv = s.photoVers || {};
       var hash = JSON.stringify((s.appointments || []).map(function (a) { return { id: a.id, greeted: a.greeted }; }))
         + '|' + Object.keys(pv).sort().map(function (k) { return k + ':' + pv[k]; }).join(',');
@@ -95,8 +113,8 @@ function freeSlots(dateStr, barberId) {
 
 // procena čekanja: minuta od sada do odabranog termina (samo za danas)
 function waitMins(dateStr, slotTime) {
-  if (!slotTime || dateStr !== todayStr()) return null;
-  var now = new Date();
+  if (!slotTime || dateStr !== todayStr(salonNow())) return null;
+  var now = salonNow();
   var diff = toMins(slotTime) - (now.getHours() * 60 + now.getMinutes());
   return diff > 0 ? diff : null;
 }
