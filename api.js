@@ -33,8 +33,14 @@ function _refresh() {
       _lastHash = hash;
       _state.appointments = s.appointments || [];
       _state.breaks = s.breaks || [];
-      // dovuci samo slike koje su nove ili izmenjene — ne ceo blob na svaki poll
-      var missing = Object.keys(pv).filter(function (k) { return _vers[k] !== pv[k]; });
+      // Odmah iscrtaj (red, demo fotke) — fotke klijenata stižu naknadno.
+      // Na TV-u je čekanje na sve fotke (megabajti base64) blokiralo ceo prikaz.
+      _emit();
+      // Dovuci samo fotke koje neki termin stvarno koristi, i to nove/izmenjene —
+      // u bazi može biti gomila starih fotki bez termina; njih ne skidamo uopšte.
+      var needed = {};
+      _state.appointments.forEach(function (a) { if (a.photoKey) needed[a.photoKey] = 1; });
+      var missing = Object.keys(pv).filter(function (k) { return needed[k] && _vers[k] !== pv[k]; });
       var jobs = missing.map(function (k) {
         return fetch("/api/photo?key=" + encodeURIComponent(k))
           .then(function (pr) { return pr.json(); })
@@ -43,7 +49,7 @@ function _refresh() {
           })
           .catch(function (e) {});
       });
-      return Promise.all(jobs).then(_emit);
+      if (jobs.length) return Promise.all(jobs).then(_emit);
     })
     .catch(function (e) { /* offline */ });
 }
