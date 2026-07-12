@@ -1,11 +1,15 @@
 // Salon App — API klijent (live preko SSE). Drži keš stanja; stranice se re-renderuju na promenu.
-const _state = { appointments: [], photos: {}, breaks: [] };
-const _subs = [];
-const _vers = {};
-let _lastHash = '';
-let _loaded = false;   // true nakon prvog uspešnog /api/state — sprečava blic praznog stanja
+// VAŽNO: ES5 sintaksa (bez ?. ?? let/const/async/strelica) — mora da radi na starim TV browserima.
+var _state = { appointments: [], photos: {}, breaks: [] };
+var _subs = [];
+var _vers = {};
+var _lastHash = '';
+var _loaded = false;   // true nakon prvog uspešnog /api/state — sprečava blic praznog stanja
 
-function toMins(t) { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m; }
+function toMins(t) {
+  var p = (t || '0:0').split(':');
+  return Number(p[0]) * 60 + Number(p[1]);
+}
 function loadAppts() { return _state.appointments; }
 function loadBreaks() { return _state.breaks; }
 // fotke su keširane po photoKey (hash sa servera — telefon se ne otkriva javno)
@@ -14,100 +18,103 @@ function onData(cb) { _subs.push(cb); }
 function isLoaded() { return _loaded; }
 // forsiraj pun refresh (posle admin logina — da stignu telefoni u keš)
 function forceRefresh() { _lastHash = ''; return _refresh(); }
-function _emit() { _subs.forEach(cb => { try { cb(); } catch (e) {} }); }
+function _emit() { _subs.forEach(function (cb) { try { cb(); } catch (e) {} }); }
 
-async function _refresh() {
-  try {
-    // admin šalje lozinku da bi dobio i telefone; javne stranice dobijaju podatke bez telefona
-    const r = await fetch("/api/state", { headers: adminHeaders() });
-    const s = await r.json();
-    _loaded = true;
-    const pv = s.photoVers || {};
-    const hash = JSON.stringify((s.appointments || []).map(a => ({ id: a.id, greeted: a.greeted })))
-      + '|' + Object.keys(pv).sort().map(k => k + ':' + pv[k]).join(',');
-    if (hash === _lastHash) return;
-    _lastHash = hash;
-    _state.appointments = s.appointments || [];
-    _state.breaks = s.breaks || [];
-    // dovuci samo slike koje su nove ili izmenjene — ne ceo blob na svaki poll
-    const missing = Object.keys(pv).filter(k => _vers[k] !== pv[k]);
-    if (missing.length) await Promise.all(missing.map(async k => {
-      try {
-        const pr = await fetch("/api/photo?key=" + encodeURIComponent(k));
-        const pj = await pr.json();
-        if (pj.dataUrl) { _state.photos[k] = pj.dataUrl; _vers[k] = pv[k]; }
-      } catch (e) {}
-    }));
-    _emit();
-  } catch (e) { /* offline */ }
+function _refresh() {
+  // admin šalje lozinku da bi dobio i telefone; javne stranice dobijaju podatke bez telefona
+  return fetch("/api/state", { headers: adminHeaders() })
+    .then(function (r) { return r.json(); })
+    .then(function (s) {
+      _loaded = true;
+      var pv = s.photoVers || {};
+      var hash = JSON.stringify((s.appointments || []).map(function (a) { return { id: a.id, greeted: a.greeted }; }))
+        + '|' + Object.keys(pv).sort().map(function (k) { return k + ':' + pv[k]; }).join(',');
+      if (hash === _lastHash) return;
+      _lastHash = hash;
+      _state.appointments = s.appointments || [];
+      _state.breaks = s.breaks || [];
+      // dovuci samo slike koje su nove ili izmenjene — ne ceo blob na svaki poll
+      var missing = Object.keys(pv).filter(function (k) { return _vers[k] !== pv[k]; });
+      var jobs = missing.map(function (k) {
+        return fetch("/api/photo?key=" + encodeURIComponent(k))
+          .then(function (pr) { return pr.json(); })
+          .then(function (pj) {
+            if (pj.dataUrl) { _state.photos[k] = pj.dataUrl; _vers[k] = pv[k]; }
+          })
+          .catch(function (e) {});
+      });
+      return Promise.all(jobs).then(_emit);
+    })
+    .catch(function (e) { /* offline */ });
 }
 
-async function addAppt(a) {
-  const r = await fetch("/api/appointments", {
+function addAppt(a) {
+  return fetch("/api/appointments", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a)
-  });
-  return r.json();   // SSE će osvežiti ostale ekrane
+  }).then(function (r) { return r.json(); });   // SSE će osvežiti ostale ekrane
 }
 // admin akcije šalju lozinku iz localStorage kao zaglavlje
 function adminHeaders(extra) {
-  const pass = (typeof localStorage !== 'undefined' && localStorage.getItem('adminPass')) || '';
+  var pass = (typeof localStorage !== 'undefined' && localStorage.getItem('adminPass')) || '';
   return Object.assign({ 'x-admin-pass': pass }, extra || {});
 }
-async function removeAppt(id) {
-  await fetch("/api/appointments/" + id, { method: "DELETE", headers: adminHeaders() });
+function removeAppt(id) {
+  return fetch("/api/appointments/" + id, { method: "DELETE", headers: adminHeaders() });
 }
-async function savePhoto(name, phone, dataUrl, consent) {
+function savePhoto(name, phone, dataUrl, consent) {
   return fetch("/api/photos", {
     method: "POST", headers: adminHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ name, phone, dataUrl, consent })
+    body: JSON.stringify({ name: name, phone: phone, dataUrl: dataUrl, consent: consent })
   });
 }
 
 // slobodni termini (iz keša) — isključuje zauzete i pauze frizera
 function freeSlots(dateStr, barberId) {
-  const taken = loadAppts().filter(a => a.date === dateStr && a.barberId === barberId).map(a => a.time);
-  const breaks = loadBreaks().filter(b => b.date === dateStr && b.barberId === barberId);
-  const out = [];
-  for (let h = SALON.hours.open; h < SALON.hours.close; h++)
-    for (let m = 0; m < 60; m += SALON.slotMin) {
-      const t = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+  var taken = loadAppts().filter(function (a) { return a.date === dateStr && a.barberId === barberId; })
+    .map(function (a) { return a.time; });
+  var breaks = loadBreaks().filter(function (b) { return b.date === dateStr && b.barberId === barberId; });
+  var out = [];
+  for (var h = SALON.hours.open; h < SALON.hours.close; h++) {
+    for (var m = 0; m < 60; m += SALON.slotMin) {
+      var t = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
       if (taken.includes(t)) continue;
-      const tMins = h * 60 + m;
-      if (breaks.some(b => tMins >= toMins(b.startTime) && tMins < toMins(b.endTime))) continue;
+      var tMins = h * 60 + m;
+      var inBreak = breaks.some(function (b) { return tMins >= toMins(b.startTime) && tMins < toMins(b.endTime); });
+      if (inBreak) continue;
       out.push(t);
     }
+  }
   return out;
 }
 
 // procena čekanja: minuta od sada do odabranog termina (samo za danas)
 function waitMins(dateStr, slotTime) {
   if (!slotTime || dateStr !== todayStr()) return null;
-  const now = new Date();
-  const diff = toMins(slotTime) - (now.getHours() * 60 + now.getMinutes());
+  var now = new Date();
+  var diff = toMins(slotTime) - (now.getHours() * 60 + now.getMinutes());
   return diff > 0 ? diff : null;
 }
 
-async function addBreak(barberId, date, startTime, endTime) {
-  const r = await fetch("/api/breaks", {
+function addBreak(barberId, date, startTime, endTime) {
+  return fetch("/api/breaks", {
     method: "POST", headers: adminHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ barberId, date, startTime, endTime })
-  });
-  return r.json();
+    body: JSON.stringify({ barberId: barberId, date: date, startTime: startTime, endTime: endTime })
+  }).then(function (r) { return r.json(); });
 }
-async function removeBreak(id) {
-  await fetch("/api/breaks/" + id, { method: "DELETE", headers: adminHeaders() });
+function removeBreak(id) {
+  return fetch("/api/breaks/" + id, { method: "DELETE", headers: adminHeaders() });
 }
 
 // live: polling kad je tab vidljiv (štedi Upstash zahteve), SSE bonus kad radi lokalno.
 // TV može postaviti window.POLL_MS pre učitavanja api.js za brži interval.
 (function initLive() {
-  const POLL = (typeof window !== 'undefined' && window.POLL_MS) || 5000;
+  var POLL = (typeof window !== 'undefined' && window.POLL_MS) || 5000;
   _refresh();
-  setInterval(() => { if (!document.hidden) _refresh(); }, POLL);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) _refresh(); });
+  setInterval(function () { if (!document.hidden) _refresh(); }, POLL);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) _refresh(); });
   try {
-    const es = new EventSource("/api/stream");
-    es.onmessage = () => _refresh();
-    es.onerror = () => es.close();
+    var es = new EventSource("/api/stream");
+    es.onmessage = function () { _refresh(); };
+    es.onerror = function () { es.close(); };
   } catch (e) {}
 })();

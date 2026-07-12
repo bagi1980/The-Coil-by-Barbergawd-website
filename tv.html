@@ -29,12 +29,12 @@
   .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
     background:radial-gradient(130% 100% at 50% 0%,rgba(10,10,12,.30) 0%,rgba(10,10,12,.78) 70%,rgba(8,8,10,.92) 100%)}
 
-  .screen{position:relative;z-index:2;height:100vh;display:grid;grid-template-rows:auto 1fr auto;
-    grid-template-columns:1.32fr 1fr;grid-template-areas:"top top" "left right" "ticker ticker";
-    gap:30px 40px;padding:36px 52px 0}
+  /* Flex umesto grid-a: stari TV browseri (Chromium <57) nemaju CSS Grid pa se sve slagalo u kolonu */
+  .screen{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;padding:36px 52px 0}
+  .main{display:flex;flex:1;min-height:0;margin-top:30px}
 
   /* ── top bar ───────────────────────────── */
-  .topbar{grid-area:top;display:flex;align-items:center;justify-content:space-between}
+  .topbar{display:flex;align-items:center;justify-content:space-between}
   .mark{display:flex;align-items:center;gap:18px}
   .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);overflow:hidden;
     box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
@@ -54,8 +54,8 @@
   .status .hrs{color:var(--mut);font-size:14px;font-weight:600;letter-spacing:.5px}
 
   /* ── left: clock + queue ───────────────── */
-  .left{grid-area:left;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-  .clock .t{font-family:var(--display);font-weight:600;font-size:clamp(108px,13vw,150px);line-height:.82;letter-spacing:-1px;
+  .left{flex:1.32;min-width:0;display:flex;flex-direction:column;min-height:0;overflow:hidden;margin-right:40px}
+  .clock .t{font-family:var(--display);font-weight:600;font-size:120px;font-size:clamp(108px,13vw,150px);line-height:.82;letter-spacing:-1px;
     font-variant-numeric:tabular-nums;text-shadow:0 8px 40px rgba(0,0,0,.55)}
   .clock .t span{color:var(--red2)}
   .clock .d{font-family:var(--serif);font-style:italic;font-size:27px;color:var(--cream);opacity:.85;margin-top:10px;text-transform:capitalize}
@@ -79,7 +79,8 @@
   .q-loading .ll{font-family:var(--display);font-weight:500;letter-spacing:5px;font-size:16px;color:var(--mut);text-transform:uppercase}
 
   /* ── right: next-client promo + music ──── */
-  .right{grid-area:right;display:flex;flex-direction:column;gap:22px;min-height:0}
+  .right{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+  .right .music{margin-top:22px}
   .promo{flex:1;min-height:230px;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
     background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
   /* --- Promo: base (no photo) --- */
@@ -105,7 +106,7 @@
   .promo.split .np-grad{
     background:linear-gradient(90deg,rgba(8,8,10,1) 0%,rgba(8,8,10,.96) 25%,rgba(8,8,10,.6) 50%,rgba(8,8,10,0) 72%)}
   .promo.split .np-body{left:30px;right:48%;top:50%;bottom:auto;transform:translateY(-50%)}
-  .promo.split .np-name{font-size:clamp(28px,3.2vw,46px);word-break:break-word}
+  .promo.split .np-name{font-size:40px;font-size:clamp(28px,3.2vw,46px);word-break:break-word}
   .promo.split .np-meta{font-size:20px}
   .promo.split .np-empty{display:none!important}
   /* TV schedule slide */
@@ -203,7 +204,7 @@
     animation:poleSpin 4s linear infinite}
   .closed-mark .wm{font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:8px;color:var(--white)}
   .closed-mark .wm b{color:var(--red2)}
-  .closed-big{font-family:var(--display);font-weight:600;font-size:clamp(72px,9vw,120px);
+  .closed-big{font-family:var(--display);font-weight:600;font-size:96px;font-size:clamp(72px,9vw,120px);
     letter-spacing:14px;color:var(--white);line-height:1}
   .closed-sub{font-family:var(--serif);font-style:italic;font-size:28px;color:var(--mut);margin-top:20px}
   .closed-book{margin-top:44px;display:inline-flex;align-items:center;gap:12px;
@@ -214,7 +215,7 @@
     transition:transform .2s,box-shadow .2s}
   .closed-book:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(200,16,46,.65)}
   /* ── ticker ────────────────────────────── */
-  .ticker{grid-area:ticker;height:64px;margin:0 -52px;border-top:1px solid var(--line);
+  .ticker{height:64px;margin:30px -52px 0;border-top:1px solid var(--line);
     background:linear-gradient(90deg,rgba(200,16,46,.10),rgba(22,48,107,.10));overflow:hidden;
     display:flex;align-items:center;backdrop-filter:blur(10px)}
   .ticker .track{display:flex;gap:54px;white-space:nowrap;animation:marq 32s linear infinite;padding-left:52px}
@@ -246,12 +247,37 @@
     .pole i,.dot,.ticker .track{animation:none}
   }
 
+  /* ── Fallback za flex `gap` (Chromium <84 = svi stariji TV browseri ga ignorišu) ──
+     `inset` je dobar proksi: podržan od Chromium 87, tj. tamo gde flex-gap radi. */
+  @supports not (inset:0){
+    .mark>*+*{margin-left:18px}
+    .status>*+*{margin-left:12px}
+    .next-title{margin-right:0}
+    .next-title::after{margin-left:14px}
+    .queue>*+*{margin-top:11px}
+    .q>*+*{margin-left:18px}
+    .q-loading>*+*{margin-top:20px}
+    .tvnav>*+*{margin-left:10px}
+    .ticker .track>*+*{margin-left:54px}
+    .ticker .it::before{margin-right:14px}
+    .np-label .dot{margin-right:9px}
+    .music .ml svg{margin-right:8px}
+    .music .play .pi{margin-bottom:8px}
+    .yt-panel>*+*{margin-top:11px}
+    .yt-row>*+*{margin-left:10px}
+    .wi-chip{margin:0 9px 9px 0}
+    .wi-foot>*+*{margin-left:12px}
+    .closed-mark>*+*{margin-left:18px}
+    .np-sched-row .sr-i{margin-left:16px}
+    .np-sched-row .sr-b{margin-left:16px}
+  }
+
   /* ── Mobile (≤899px) ───────────────────── */
   @media(max-width:899px){
     html,body{overflow-y:auto;height:auto}
-    .screen{grid-template-columns:1fr;grid-template-rows:auto auto auto auto;
-      grid-template-areas:"top" "left" "right" "ticker";
-      height:auto;min-height:100vh;gap:16px 0;padding:20px 18px 0}
+    .screen{height:auto;min-height:100vh;padding:20px 18px 0}
+    .main{display:block;margin-top:16px}
+    .left{margin-right:0}
     .topbar{flex-wrap:wrap;gap:10px;padding-top:50px}
     .mark{gap:12px}
     .pole{width:20px;height:50px;border-radius:10px}
@@ -260,7 +286,7 @@
     .status{padding:8px 14px}
     .status .lbl{font-size:13px;letter-spacing:2px}
     .status .hrs{font-size:12px}
-    .clock .t{font-size:clamp(72px,18vw,108px)}
+    .clock .t{font-size:88px;font-size:clamp(72px,18vw,108px)}
     .clock .d{font-size:18px;margin-top:6px}
     .next-title{font-size:15px;letter-spacing:4px;margin:18px 0 10px}
     .q{padding:12px 14px;gap:12px;border-radius:14px}
@@ -268,14 +294,15 @@
     .q .qn{font-size:20px}
     .q .qm{font-size:14px}
     .queue{gap:8px}
-    .right{gap:14px;margin-top:4px}
+    .right{margin-top:16px}
+    .right .music{margin-top:14px}
     .promo{min-height:240px;border-radius:18px}
     .np-name{font-size:36px}
     .np-meta{font-size:17px;margin-top:5px}
     .np-kicker{font-size:15px}
     .np-label{top:14px;left:16px;font-size:13px;padding:7px 12px}
     .music{height:150px;border-radius:16px}
-    .ticker{height:52px;margin:0 -18px}
+    .ticker{height:52px;margin:16px -18px 0}
     .ticker .track{gap:36px;padding-left:18px}
     .ticker .it{font-size:15px;letter-spacing:2px}
     .welcome .nm{font-size:64px}
@@ -287,15 +314,17 @@
     .demo{bottom:10px;right:10px}
   }
 </style>
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 <script>
   // Odredi "zatvoreno" PRE prvog paint-a da TV ekran ne bljesne pre "Zatvoreno" overlay-a
-  document.documentElement.classList.toggle('tv-closed',
-    (function(){ var h=new Date().getHours(); return h<SALON.hours.open||h>=SALON.hours.close; })());
+  try{
+    var _h=new Date().getHours();
+    if(_h<SALON.hours.open||_h>=SALON.hours.close) document.documentElement.className+=' tv-closed';
+  }catch(e){}
 </script>
 </head>
 <body>
-<canvas id="bg"></canvas>
+<canvas id="bg" class="bg-fallback"></canvas>
 <div class="scrim"></div>
 
 <nav class="tvnav">
@@ -348,6 +377,7 @@
     </div>
   </div>
 
+  <div class="main">
   <!-- LEFT -->
   <div class="left">
     <div class="clock">
@@ -399,6 +429,7 @@
       </div>
     </div>
   </div>
+  </div><!-- /main -->
 
   <!-- TICKER -->
   <div class="ticker"><div class="track" id="ticker"></div></div>
@@ -425,36 +456,39 @@
         resolutionScale: 1.0,
         colors: { red: '#C8102E', blue: '#16306B', cream: '#F4EFE2', bg: '#0A0A0C' }
       });
-    } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
+      bg.classList.remove('bg-fallback'); // talasi rade → skloni CSS pruge
+    } catch (e) { } // stari browser / no-WebGL → ostaju CSS pruge (bg-fallback je default)
   })();
 </script>
 <script>window.POLL_MS = 3000;</script>
-<script src="api.js?v=2"></script>
+<script src="api.js?v=3"></script>
 <script>
-const $=s=>document.querySelector(s);
+// VAŽNO: ES5 sintaksa u celom skriptu — stari TV browseri (Tizen/webOS) padaju na ?. ?? let/const/async/`…`
+function $(s){ return document.querySelector(s); }
+function setCls(el,cls,on){ if(on) el.classList.add(cls); else el.classList.remove(cls); }
 
 $('#estLine').textContent = SALON.tagline || 'Classic Cuts';
 $('#hours').textContent = String(SALON.hours.open).padStart(2,'0') + ' — ' + SALON.hours.close + 'h';
 
-$('#ticker').innerHTML = (()=>{
-  const items = SERVICES.map(s=>`<div class="it">${s.name} <b>${s.price} RSD</b></div>`).join('')
-    + `<div class="it">WALK-INS WELCOME</div><div class="it">${SALON.tagline}</div>`;
+$('#ticker').innerHTML = (function(){
+  var items = SERVICES.map(function(s){ return '<div class="it">'+s.name+' <b>'+s.price+' RSD</b></div>'; }).join('')
+    + '<div class="it">WALK-INS WELCOME</div><div class="it">'+SALON.tagline+'</div>';
   return items + items;
 })();
 
 // ── Sat ──
 function tick(){
-  const d=new Date();
-  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
-  $('#clock').innerHTML=`${hh}<span>:</span>${mm}`;
-  $('#date').textContent=d.toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long'});
+  var d=new Date();
+  var hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
+  $('#clock').innerHTML=hh+'<span>:</span>'+mm;
+  try{ $('#date').textContent=d.toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
   checkWelcome(d);
 }
 setInterval(tick,1000);
 
 // ── Muzika ──
 function ytEmbed(u){
-  u=(u||'').trim(); let m;
+  u=(u||'').trim(); var m;
   if(/youtube\.com\/embed\//.test(u)) return u;
   if(m=u.match(/[?&]list=([\w-]+)/)) return 'https://www.youtube.com/embed/videoseries?list='+m[1];
   if(m=u.match(/[?&]v=([\w-]+)/))    return 'https://www.youtube.com/embed/'+m[1];
@@ -463,17 +497,17 @@ function ytEmbed(u){
   return null;
 }
 function currentYt(){ return localStorage.getItem('yt_url')||SALON.youtube; }
-function playYt(e){ $('#yt').src=e+(e.includes('?')?'&':'?')+'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
-$('#play').onclick=()=>playYt(currentYt());
-$('#ytEdit').onclick=()=>{ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
-$('#ytGo').onclick=()=>{ const e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.setItem('yt_url',e); playYt(e); };
-$('#ytInput').onkeydown=ev=>{ if(ev.key==='Enter') $('#ytGo').click(); };
-$('#ytSearch').onclick=()=>{ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent($('#ytInput').value.trim()||'lofi barbershop'),'_blank'); };
+function playYt(e){ $('#yt').src=e+(e.indexOf('?')!==-1?'&':'?')+'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
+$('#play').onclick=function(){ playYt(currentYt()); };
+$('#ytEdit').onclick=function(){ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
+$('#ytGo').onclick=function(){ var e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.setItem('yt_url',e); playYt(e); };
+$('#ytInput').onkeydown=function(ev){ if(ev.key==='Enter') $('#ytGo').click(); };
+$('#ytSearch').onclick=function(){ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent($('#ytInput').value.trim()||'lofi barbershop'),'_blank'); };
 
 // ── Demo klijenti (kad nema pravih termina — da TV ne bude prazna) ──
 // Fotke: naziv fajla = ime klijenta, u img/ (proba .jpg/.jpeg/.png/.webp).
 // 3 postojeće fotke (demo-client*.png) su mapirane na fiksne fajlove.
-const DEMO_CLIENTS=[
+var DEMO_CLIENTS=[
   {name:'Miloš',  serviceId:'s2', barberId:'b1', src:['img/demo-client.jpg']},
   {name:'Luka',   serviceId:'s4', barberId:'b2', src:['img/Luka.jpg','img/Luka.jpeg','img/Luka.png','img/Luka.webp']},
   {name:'Đorđe',  serviceId:'s3', barberId:'b3', src:['img/demo-client2.jpg']},
@@ -481,28 +515,28 @@ const DEMO_CLIENTS=[
 ];
 // Učitaj fotke unapred; postavi _photo na prvu koja postoji (ako nijedna → ikonica stolice)
 function preloadDemoPhotos(done){
-  let pending=DEMO_CLIENTS.length;
-  const fin=()=>{ if(--pending<=0 && done) done(); };
-  DEMO_CLIENTS.forEach(c=>{
-    let i=0;
+  var pending=DEMO_CLIENTS.length;
+  function fin(){ if(--pending<=0 && done) done(); }
+  DEMO_CLIENTS.forEach(function(c){
+    var i=0;
     (function tryNext(){
       if(i>=c.src.length){ fin(); return; }
-      const url=c.src[i++], im=new Image();
-      im.onload=()=>{ c._photo=url; fin(); };
+      var url=c.src[i++], im=new Image();
+      im.onload=function(){ c._photo=url; fin(); };
       im.onerror=tryNext;
       im.src=url;
     })();
   });
 }
 function demoToday(){
-  const openM=SALON.hours.open*60, closeM=SALON.hours.close*60;
-  const slot=SALON.slotMin||30, n=DEMO_CLIENTS.length;
-  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  var openM=SALON.hours.open*60, closeM=SALON.hours.close*60;
+  var slot=SALON.slotMin||30, n=DEMO_CLIENTS.length;
+  var nowM=new Date().getHours()*60+new Date().getMinutes();
   // Termini na mreži od pola sata (kao na zakazivanju): prvi = trenutni slot (u stolici), ostali nadolazeći
-  const curSlot=Math.floor(nowM/slot)*slot;
-  const start=Math.max(openM, Math.min(curSlot, closeM-slot*(n-1)));
-  return DEMO_CLIENTS.map((c,i)=>{
-    const t=start+i*slot;
+  var curSlot=Math.floor(nowM/slot)*slot;
+  var start=Math.max(openM, Math.min(curSlot, closeM-slot*(n-1)));
+  return DEMO_CLIENTS.map(function(c,i){
+    var t=start+i*slot;
     return { id:'demo'+i, date:todayStr(),
       time:String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),
       name:c.name, phone:'', serviceId:c.serviceId, barberId:c.barberId, _photo:c._photo };
@@ -511,31 +545,32 @@ function demoToday(){
 function photoOf(a){ return (a && a._photo) || getPhoto(a); }
 
 // ── Stanje sesije ──
-let _demoMode=false;
-function toMins(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+var _demoMode=false;
 function getSessionState(){
-  const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
-  let today=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+  var now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
+  var today=loadAppts().filter(function(a){ return a.date===todayStr(); })
+    .sort(function(x,y){ return x.time.localeCompare(y.time); });
   _demoMode=false;
   if(!today.length){ today=demoToday(); _demoMode=true; }   // nema pravih → virtualni klijenti
-  const current=[], upcoming=[];
-  for(const a of today){
-    const start=toMins(a.time), dur=(serviceById(a.serviceId)?.min)||30;
+  var current=[], upcoming=[];
+  for(var i=0;i<today.length;i++){
+    var a=today[i];
+    var start=toMins(a.time), dur=(serviceById(a.serviceId)||{}).min||30;
     if(start<=nowMins && nowMins<start+dur) current.push(a);
     else if(start>nowMins) upcoming.push(a);
   }
-  return {current, next:upcoming[0]||null, upcoming};
+  return {current:current, next:upcoming[0]||null, upcoming:upcoming};
 }
 
 // ── Cycling panel (desna karta: na redu → klijent A → klijent B…) ──
-let _slides=[], _slideIdx=0, _cycleTimer=null, _fading=false, _slideKey='';
+var _slides=[], _slideIdx=0, _cycleTimer=null, _fading=false, _slideKey='';
 
 function applySlide(slide){
-  const sched=$('#npSched'), body=$('#npBody'), empty=$('#npEmpty'), bg=$('#npBg');
+  var sched=$('#npSched'), body=$('#npBody'), empty=$('#npEmpty'), bg=$('#npBg');
   sched.style.display='none'; body.style.display='block';
-  $('#npCounter').textContent=_slides.length>1?`${_slideIdx+1} / ${_slides.length}`:'';
+  $('#npCounter').textContent=_slides.length>1?((_slideIdx+1)+' / '+_slides.length):'';
 
-  const card=$('#nextCard');
+  var card=$('#nextCard');
   if(slide.type==='empty'){
     card.classList.remove('split');
     $('#npLabel').innerHTML='<span class="dot"></span>ČEKA SE';
@@ -550,39 +585,39 @@ function applySlide(slide){
     bg.classList.remove('on'); empty.style.display='none'; body.style.display='none';
     sched.style.display='flex';
     sched.innerHTML='<div class="np-sched-title">Raspored za danas</div>'
-      +slide.list.map(a=>{
-        const s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
-        const inChair=slide.currentIds.includes(a.id);
-        return `<div class="np-sched-row${inChair?' active':''}">
-          <div class="sr-t">${esc(a.time)}</div>
-          <div class="sr-i"><div class="sr-n">${esc(a.name)}</div><div class="sr-m">${esc(s)} · ${esc(b)}</div></div>
-          ${inChair?'<div class="sr-b">U STOLICI</div>':''}
-        </div>`;
+      +slide.list.map(function(a){
+        var s=(serviceById(a.serviceId)||{}).name||'', b=(barberById(a.barberId)||{}).name||'';
+        var inChair=slide.currentIds.indexOf(a.id)!==-1;
+        return '<div class="np-sched-row'+(inChair?' active':'')+'">'
+          +'<div class="sr-t">'+esc(a.time)+'</div>'
+          +'<div class="sr-i"><div class="sr-n">'+esc(a.name)+'</div><div class="sr-m">'+esc(s)+' · '+esc(b)+'</div></div>'
+          +(inChair?'<div class="sr-b">U STOLICI</div>':'')
+          +'</div>';
       }).join('');
     return;
   }
 
-  const a=slide.client, s=serviceById(a.serviceId)?.name||'', b=barberById(a.barberId)?.name||'';
-  const photo=photoOf(a);
+  var a=slide.client, s=(serviceById(a.serviceId)||{}).name||'', b=(barberById(a.barberId)||{}).name||'';
+  var photo=photoOf(a);
   if(slide.type==='next'){
     $('#npLabel').innerHTML='<span class="dot"></span>NA REDU';
     $('#npKicker').textContent='Sledeći u stolici';
   } else {
-    $('#npLabel').innerHTML=`<span class="dot"></span>U STOLICI · ${b.toUpperCase()}`;
+    $('#npLabel').innerHTML='<span class="dot"></span>U STOLICI · '+b.toUpperCase();
     $('#npKicker').textContent='Trenutno';
   }
   $('#npName').textContent=a.name;
-  $('#npMeta').textContent=`${a.time} · ${s}`;
-  if(photo){ bg.style.backgroundImage=`url('${photo}')`; bg.classList.add('on'); empty.style.display='none'; card.classList.add('split'); }
+  $('#npMeta').textContent=a.time+' · '+s;
+  if(photo){ bg.style.backgroundImage="url('"+photo+"')"; bg.classList.add('on'); empty.style.display='none'; card.classList.add('split'); }
   else { bg.classList.remove('on'); empty.style.display='flex'; card.classList.remove('split'); }
 }
 
 function buildSlides(current,next,upcoming){
-  const slides=[];
-  const allToday=[...current,...upcoming];
-  if(allToday.length) slides.push({type:'tv',list:allToday.slice(0,4),currentIds:current.map(c=>c.id)});
-  for(const c of current) slides.push({type:'now',client:c});
-  if(_demoMode){ for(const c of upcoming) slides.push({type:'next',client:c}); }  // demo: vrti svih 5
+  var slides=[];
+  var allToday=current.concat(upcoming);
+  if(allToday.length) slides.push({type:'tv',list:allToday.slice(0,4),currentIds:current.map(function(c){ return c.id; })});
+  for(var i=0;i<current.length;i++) slides.push({type:'now',client:current[i]});
+  if(_demoMode){ for(var j=0;j<upcoming.length;j++) slides.push({type:'next',client:upcoming[j]}); }  // demo: vrti svih 5
   else if(next) slides.push({type:'next',client:next});
   return slides.length?slides:[{type:'empty'}];
 }
@@ -590,14 +625,14 @@ function buildSlides(current,next,upcoming){
 function cycleNext(){
   if(_slides.length<=1||_fading) return;
   _fading=true;
-  const card=$('#nextCard');
+  var card=$('#nextCard');
   card.style.transition='opacity 0.5s ease';
   card.style.opacity='0';
-  setTimeout(()=>{
+  setTimeout(function(){
     _slideIdx=(_slideIdx+1)%_slides.length;
     applySlide(_slides[_slideIdx]);
     card.style.opacity='1';
-    setTimeout(()=>{ card.style.transition=''; _fading=false; }, 550);
+    setTimeout(function(){ card.style.transition=''; _fading=false; }, 550);
   }, 500);
 }
 
@@ -607,7 +642,7 @@ function startCycle(){
 }
 
 // ── Queue (leva lista) ──
-let _lastQKey='';
+var _lastQKey='';
 function renderQueue(){
   // Ne prikazuj prazno stanje pre prvog učitavanja — izbegava blic "Nema termina"
   if(!isLoaded()){
@@ -617,31 +652,33 @@ function renderQueue(){
     }
     return;
   }
-  const {current,next,upcoming}=getSessionState();
+  var st=getSessionState(), current=st.current, next=st.next, upcoming=st.upcoming;
   // U demo modu vreme je relativno na "sada" — osveži prikaz svakih ~10 min da prati sat
-  const demoK=_demoMode?('#'+Math.floor(Date.now()/600000)):'';
+  var demoK=_demoMode?('#'+Math.floor(Date.now()/600000)):'';
 
   // Leva lista: klijenti u stolici (označeni) + nadolazeći
-  const allVisible=[...current,...upcoming].slice(0,5);
-  const qKey=allVisible.map(a=>a.id+a.greeted).join(',')+current.map(a=>a.id).join('|')+demoK;
+  var allVisible=current.concat(upcoming).slice(0,5);
+  var qKey=allVisible.map(function(a){ return a.id+a.greeted; }).join(',')
+    +current.map(function(a){ return a.id; }).join('|')+demoK;
   if(qKey!==_lastQKey){
     _lastQKey=qKey;
-    $('#queue').innerHTML=allVisible.length?allVisible.map(a=>{
-      const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
-      const inChair=current.includes(a);
-      return `<div class="q ${inChair?'now':''}"><div class="qt">${esc(a.time)}</div>
-        <div><div class="qn">${esc(a.name)}</div><div class="qm">${esc(s)} · ${esc(b)}</div></div>
-        ${inChair?'<div class="tag">U STOLICI</div>':''}
-        </div>`;
+    $('#queue').innerHTML=allVisible.length?allVisible.map(function(a){
+      var b=(barberById(a.barberId)||{}).name||'', s=(serviceById(a.serviceId)||{}).name||'';
+      var inChair=current.indexOf(a)!==-1;
+      return '<div class="q '+(inChair?'now':'')+'"><div class="qt">'+esc(a.time)+'</div>'
+        +'<div><div class="qn">'+esc(a.name)+'</div><div class="qm">'+esc(s)+' · '+esc(b)+'</div></div>'
+        +(inChair?'<div class="tag">U STOLICI</div>':'')
+        +'</div>';
     }).join(''):'<div class="empty">Nema više termina danas — uđi, sediš odmah.</div>';
   }
 
   // Cycling panel — osvežava samo ako se lista promenila
-  const newSlides=buildSlides(current,next,upcoming);
-  const slideKey=s=>s.type==='tv'
-    ?'tv:'+(s.list||[]).map(a=>a.id).join('-')+':'+(s.currentIds||[]).join('-')
-    :s.type+':'+(s.client?.id||'')+(s.client?':'+(photoOf(s.client)?'1':'0'):'');
-  const newKey=newSlides.map(slideKey).join(',')+demoK;
+  var newSlides=buildSlides(current,next,upcoming);
+  function slideKey(s){
+    if(s.type==='tv') return 'tv:'+(s.list||[]).map(function(a){ return a.id; }).join('-')+':'+(s.currentIds||[]).join('-');
+    return s.type+':'+((s.client||{}).id||'')+(s.client?(':'+(photoOf(s.client)?'1':'0')):'');
+  }
+  var newKey=newSlides.map(slideKey).join(',')+demoK;
   if(newKey!==_slideKey){
     _slideKey=newKey; _slides=newSlides; _slideIdx=0;
     applySlide(_slides[0]);
@@ -650,15 +687,15 @@ function renderQueue(){
 }
 
 // ── Welcome overlay ──
-const WELCOME_MS=10000;
-let wQueue=[],wIdx=0,wTimer=null,wActive=false;
+var WELCOME_MS=10000;
+var wQueue=[],wIdx=0,wTimer=null,wActive=false;
 function renderWelcome(a){
-  const first=(a.name||'').split(' ')[0]||a.name;
-  $('#wName').innerHTML=`<span>${esc(first)}</span>`;
-  const photo=photoOf(a);
+  var first=(a.name||'').split(' ')[0]||a.name;
+  $('#wName').innerHTML='<span>'+esc(first)+'</span>';
+  var photo=photoOf(a);
   if(photo){$('#wImg').src=photo;$('#wPic').style.display='block';$('#wCap').textContent='Lepo je videti te ponovo.';}
   else{$('#wPic').style.display='none';$('#wCap').textContent='Dobrodošao u salon.';}
-  $('#wCount').textContent=wQueue.length>1?`${wIdx+1} / ${wQueue.length}`:'';
+  $('#wCount').textContent=wQueue.length>1?((wIdx+1)+' / '+wQueue.length):'';
 }
 function runWelcome(){
   if(wIdx>=wQueue.length){$('#welcome').classList.remove('on');wQueue=[];wIdx=0;wActive=false;clearTimeout(wTimer);return;}
@@ -666,15 +703,15 @@ function runWelcome(){
   clearTimeout(wTimer); wTimer=setTimeout(runWelcome,WELCOME_MS);
 }
 function showWelcome(a){
-  const key=(a.name||'').trim().toLowerCase()+'|'+(a.phone||'').trim();
-  if(wQueue.some(x=>(x.name||'').trim().toLowerCase()+'|'+(x.phone||'').trim()===key)) return;
+  var key=clientKey(a.name,a.phone);
+  if(wQueue.some(function(x){ return clientKey(x.name,x.phone)===key; })) return;
   wQueue.push(a);
   if(!wActive) runWelcome();
-  else $('#wCount').textContent=`${wIdx} / ${wQueue.length}`;
+  else $('#wCount').textContent=wIdx+' / '+wQueue.length;
 }
 function checkWelcome(d){
-  const t=d.toTimeString().slice(0,5);
-  loadAppts().filter(a=>a.date===todayStr()&&a.time===t&&!a.greeted).forEach(a=>{
+  var t=d.toTimeString().slice(0,5);
+  loadAppts().filter(function(a){ return a.date===todayStr()&&a.time===t&&!a.greeted; }).forEach(function(a){
     a.greeted=true;
     fetch('/api/appointments/greet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})});
     showWelcome(a);
@@ -683,68 +720,69 @@ function checkWelcome(d){
 
 onData(renderQueue);
 
-$('#demo').onclick=()=>{
-  const list=loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
+$('#demo').onclick=function(){
+  var list=loadAppts().filter(function(a){ return a.date===todayStr(); })
+    .sort(function(x,y){ return x.time.localeCompare(y.time); });
   showWelcome(list[0]||{name:'Test Klijent',phone:''});
 };
 
 // ── Walk-in ──
-(()=>{
-  let wiService=null, wiBarber=null;
-  $('#wiServices').innerHTML=SERVICES.map(s=>`<div class="wi-chip" data-id="${s.id}">${s.name}</div>`).join('');
-  $('#wiBarbers').innerHTML=BARBERS.map(b=>`<div class="wi-chip" data-id="${b.id}">${b.name}</div>`).join('');
+(function(){
+  var wiService=null, wiBarber=null;
+  $('#wiServices').innerHTML=SERVICES.map(function(s){ return '<div class="wi-chip" data-id="'+s.id+'">'+s.name+'</div>'; }).join('');
+  $('#wiBarbers').innerHTML=BARBERS.map(function(b){ return '<div class="wi-chip" data-id="'+b.id+'">'+b.name+'</div>'; }).join('');
   function wiCheck(){ $('#wiOk').disabled=!(wiService&&wiBarber&&$('#wiName').value.trim()); }
-  $('#wiServices').onclick=e=>{
-    const c=e.target.closest('.wi-chip'); if(!c) return;
-    document.querySelectorAll('#wiServices .wi-chip').forEach(x=>x.classList.remove('sel'));
-    c.classList.add('sel'); wiService=c.dataset.id; wiCheck();
+  $('#wiServices').onclick=function(e){
+    var c=e.target.closest('.wi-chip'); if(!c) return;
+    document.querySelectorAll('#wiServices .wi-chip').forEach(function(x){ x.classList.remove('sel'); });
+    c.classList.add('sel'); wiService=c.getAttribute('data-id'); wiCheck();
   };
-  $('#wiBarbers').onclick=e=>{
-    const c=e.target.closest('.wi-chip'); if(!c) return;
-    document.querySelectorAll('#wiBarbers .wi-chip').forEach(x=>x.classList.remove('sel'));
-    c.classList.add('sel'); wiBarber=c.dataset.id; wiCheck();
+  $('#wiBarbers').onclick=function(e){
+    var c=e.target.closest('.wi-chip'); if(!c) return;
+    document.querySelectorAll('#wiBarbers .wi-chip').forEach(function(x){ x.classList.remove('sel'); });
+    c.classList.add('sel'); wiBarber=c.getAttribute('data-id'); wiCheck();
   };
   $('#wiName').oninput=wiCheck;
-  $('#wiBtn').onclick=()=>{ $('#wiWrap').classList.add('on'); $('#wiName').focus(); };
-  $('#wiCancel').onclick=()=>closeWi();
-  $('#wiWrap').onclick=e=>{ if(e.target===$('#wiWrap')) closeWi(); };
+  $('#wiBtn').onclick=function(){ $('#wiWrap').classList.add('on'); $('#wiName').focus(); };
+  $('#wiCancel').onclick=function(){ closeWi(); };
+  $('#wiWrap').onclick=function(e){ if(e.target===$('#wiWrap')) closeWi(); };
   function closeWi(){
     $('#wiWrap').classList.remove('on');
     $('#wiName').value=''; wiService=null; wiBarber=null;
-    document.querySelectorAll('.wi-chip').forEach(x=>x.classList.remove('sel'));
+    document.querySelectorAll('.wi-chip').forEach(function(x){ x.classList.remove('sel'); });
     wiCheck();
   }
-  $('#wiOk').onclick=async()=>{
-    const name=$('#wiName').value.trim();
+  $('#wiOk').onclick=function(){
+    var name=$('#wiName').value.trim();
     if(!name||!wiService||!wiBarber) return;
     // Nađi prvi slobodan slot od sada
-    const free=freeSlots(todayStr(),wiBarber);
-    const now=new Date(), nowStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-    const slot=free.find(t=>t>=nowStr)||free[0];
+    var free=freeSlots(todayStr(),wiBarber);
+    var now=new Date(), nowStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    var slot=free.find(function(t){ return t>=nowStr; })||free[0];
     if(!slot){ alert('Nema slobodnih termina za danas.'); return; }
     $('#wiOk').disabled=true;
-    await addAppt({date:todayStr(),time:slot,barberId:wiBarber,serviceId:wiService,name,phone:'walk-in'});
-    closeWi();
+    addAppt({date:todayStr(),time:slot,barberId:wiBarber,serviceId:wiService,name:name,phone:'walk-in'})
+      .then(closeWi,closeWi);
   };
 })();
 
 // ── Closed mode ──
 function checkClosed(){
-  const h=new Date().getHours();
-  const closed=h<SALON.hours.open||h>=SALON.hours.close;
-  document.documentElement.classList.toggle('tv-closed',closed);
-  $('#closedWrap').classList.toggle('on',closed);
+  var h=new Date().getHours();
+  var closed=h<SALON.hours.open||h>=SALON.hours.close;
+  setCls(document.documentElement,'tv-closed',closed);
+  setCls($('#closedWrap'),'on',closed);
   if(closed){
-    const openH=String(SALON.hours.open).padStart(2,'0')+':00';
+    var openH=String(SALON.hours.open).padStart(2,'0')+':00';
     $('#closedSub').textContent = h>=SALON.hours.close
-      ? `Vidimo se sutra u ${openH}`
-      : `Otvaramo u ${openH}`;
+      ? 'Vidimo se sutra u '+openH
+      : 'Otvaramo u '+openH;
   }
 }
 setInterval(checkClosed, 60000);
 
 tick(); renderQueue(); checkClosed();
-preloadDemoPhotos(()=>renderQueue());   // učitaj demo fotke pa ponovo iscrtaj sa slikama
+preloadDemoPhotos(function(){ renderQueue(); });   // učitaj demo fotke pa ponovo iscrtaj sa slikama
 </script>
 </body>
 </html>

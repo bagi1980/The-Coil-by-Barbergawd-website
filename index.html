@@ -238,8 +238,8 @@
     } catch (e) { bg.classList.add('bg-fallback'); } // offline / no-WebGL safe
   })();
 </script>
-<script src="config.js?v=2"></script>
-<script src="api.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="api.js?v=3"></script>
 <script>
 const $ = s => document.querySelector(s);
 let sel = { service:null, barber:null, day:todayStr(), time:null };
@@ -278,7 +278,7 @@ async function adminLogin(){
 $('#adminLoginBtn').onclick=adminLogin;
 $('#adminPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
 $('#adminLogout').onclick=()=>{ localStorage.removeItem('adminPass'); forceRefresh(); $('#admin').style.display='none'; openAdminGate(); };
-$('#adminGateBack').onclick=()=>{ closeAdminGate(); document.querySelector('.tab[data-tab="book"]')?.click(); window.scrollTo(0,0); };
+$('#adminGateBack').onclick=()=>{ closeAdminGate(); var _tb=document.querySelector('.tab[data-tab="book"]'); if(_tb) _tb.click(); window.scrollTo(0,0); };
 
 // services
 $('#services').innerHTML = SERVICES.map(s=>
@@ -331,7 +331,7 @@ $('#submit').onclick = async ()=>{
   const a = await addAppt({ date:sel.day, time:sel.time, barberId:sel.barber, serviceId:sel.service,
     name:$('#name').value.trim(), phone:$('#phone').value.trim() });
   if(!a || a.error){
-    $('#result').innerHTML = `<div class="ok" style="border-color:rgba(220,90,90,.5)"><b>NIJE ZAKAZANO</b><br>${esc(a?.error||'Greška — pokušaj ponovo.')}</div>`;
+    $('#result').innerHTML = `<div class="ok" style="border-color:rgba(220,90,90,.5)"><b>NIJE ZAKAZANO</b><br>${esc((a&&a.error)||'Greška — pokušaj ponovo.')}</div>`;
     check(); refreshSlots(); return;
   }
   const b=barberById(sel.barber).name, s=serviceById(sel.service);
@@ -344,7 +344,7 @@ $('#submit').onclick = async ()=>{
 function renderToday(){
   const list = loadAppts().filter(a=>a.date===todayStr()).sort((x,y)=>x.time.localeCompare(y.time));
   $('#todayList').innerHTML = list.length ? list.map(a=>{
-    const b=barberById(a.barberId)?.name||'', s=serviceById(a.serviceId)?.name||'';
+    const b=(barberById(a.barberId)||{}).name||'', s=(serviceById(a.serviceId)||{}).name||'';
     const ph=getPhoto(a);
     const thumb = `<div class="thumb${ph?' has':''}" data-id="${esc(a.id)}" title="${ph?'Klikni da promeniš fotku':'Klikni da dodaš fotku'}">${
       ph ? `<img src="${esc(ph)}" alt=""><span class="edit">✎</span>` : '＋'}</div>`;
@@ -553,7 +553,7 @@ $('#aSubmit').onclick=async()=>{
   $('#aSubmit').disabled=true;
   const a=await addAppt({ date:asel.day, time:asel.time, barberId:asel.barber, serviceId:asel.service,
     name:$('#aName').value.trim(), phone:$('#aPhone').value.trim() });
-  if(!a || a.error){ $('#aResult').innerHTML='⚠ '+esc(a?.error||'Greška — pokušaj ponovo.'); aCheck(); aRefreshSlots(); return; }
+  if(!a || a.error){ $('#aResult').innerHTML='⚠ '+esc((a&&a.error)||'Greška — pokušaj ponovo.'); aCheck(); aRefreshSlots(); return; }
   const b=barberById(asel.barber).name;
   $('#aResult').innerHTML=`✓ Zakazano: ${esc(a.name)} kod ${esc(b)} u ${esc(a.time)} (${asel.day===todayStr()?'danas':asel.day})`;
   $('#aName').value=''; $('#aPhone').value='';
@@ -577,7 +577,7 @@ function renderBreaks(){
   const today=todayStr();
   const list=loadBreaks().filter(b=>b.date>=today).sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
   $('#breaksList').innerHTML=list.length?list.map(b=>{
-    const bn=BARBERS.find(x=>x.id===b.barberId)?.name||b.barberId;
+    const bn=(BARBERS.find(x=>x.id===b.barberId)||{}).name||b.barberId;
     const day=b.date===today?'Danas':b.date;
     return `<div class="item"><div class="t">${b.startTime}–${b.endTime}</div>
       <div><div class="who">${bn}</div><div class="meta">${day}</div></div>
@@ -607,7 +607,7 @@ onData(()=>{
 refreshSlots();
 
 // deeplink sa TV ekrana: index.html#admin odmah otvara admin tab
-if(location.hash==='#admin') document.querySelector('.tab[data-tab="admin"]')?.click();
+if(location.hash==='#admin') var _ta=document.querySelector('.tab[data-tab="admin"]'); if(_ta) _ta.click();
 </script>
 </body>
 </html>
