@@ -12,7 +12,7 @@ body{font-family:var(--body);color:var(--white);min-height:100vh;background:var(
 
 /* animated barber-pole hero background behind the header */
 #bg{position:fixed;inset:0 0 auto 0;height:520px;width:100%;z-index:0;display:block}
-.bg-fallback{background:repeating-linear-gradient(125deg,rgba(200,16,46,.20) 0 60px,rgba(244,239,226,.05) 60px 120px,rgba(22,48,107,.22) 120px 180px,rgba(244,239,226,.05) 180px 240px)}
+.bg-fallback{background:repeating-linear-gradient(125deg,rgba(200,16,46,.20) 0,rgba(200,16,46,.20) 60px,rgba(244,239,226,.05) 60px,rgba(244,239,226,.05) 120px,rgba(22,48,107,.22) 120px,rgba(22,48,107,.22) 180px,rgba(244,239,226,.05) 180px,rgba(244,239,226,.05) 240px)}
 .bg-scrim{position:fixed;inset:0 0 auto 0;height:520px;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(10,10,12,.45) 0%,rgba(10,10,12,.72) 55%,var(--bg) 100%)}
 
@@ -28,7 +28,7 @@ a{color:inherit}
    Manji pol sa top:-200% dao bi samo -88px preklapanja < 112px → praznina gore = "skok".
    top:-128px (kao TV) → 128px preklapanja > 112px → uvek pokriva. */
 .pole i{position:absolute;left:-50%;top:-128px;width:200%;height:384px;
-  background:repeating-linear-gradient(120deg,var(--red) 0 14px,var(--cream) 14px 28px,var(--blue) 28px 42px,var(--cream) 42px 56px);
+  background:repeating-linear-gradient(120deg,var(--red) 0,var(--red) 14px,var(--cream) 14px,var(--cream) 28px,var(--blue) 28px,var(--blue) 42px,var(--cream) 42px,var(--cream) 56px);
   animation:poleSpin 4s linear infinite}
 @keyframes poleSpin{to{transform:translateY(112px)}}
 .topnav .mini b{font-family:var(--display);font-weight:600;letter-spacing:4px;font-size:18px}
