@@ -1,5 +1,31 @@
 // Salon App — API klijent (live preko SSE). Drži keš stanja; stranice se re-renderuju na promenu.
 // VAŽNO: ES5 sintaksa (bez ?. ?? let/const/async/strelica) — mora da radi na starim TV browserima.
+
+// fetch fallback preko XHR — TV browseri sa Chromium <42 nemaju fetch; bez ovoga
+// /api/state nikad ne stigne pa TV večno prikazuje "Učitavanje…" (bez ijedne greške u sintaksi).
+if (typeof window !== 'undefined' && !window.fetch) {
+  window.fetch = function (url, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      var x = new XMLHttpRequest();
+      x.open(opts.method || 'GET', url, true);
+      var h = opts.headers || {};
+      for (var k in h) { if (Object.prototype.hasOwnProperty.call(h, k)) x.setRequestHeader(k, h[k]); }
+      x.onload = function () {
+        resolve({
+          ok: x.status >= 200 && x.status < 300,
+          status: x.status,
+          json: function () { try { return Promise.resolve(JSON.parse(x.responseText)); } catch (e) { return Promise.reject(e); } },
+          text: function () { return Promise.resolve(x.responseText); }
+        });
+      };
+      x.onerror = function () { reject(new Error('network')); };
+      x.send(opts.body || null);
+    });
+  };
+  if (window.dbg) window.dbg('fetch ne postoji → XHR fallback aktivan');
+}
+
 var _state = { appointments: [], photos: {}, breaks: [] };
 var _subs = [];
 var _vers = {};
@@ -69,7 +95,7 @@ function _refresh() {
       });
       if (jobs.length) return Promise.all(jobs).then(_emit);
     })
-    .catch(function (e) { /* offline */ });
+    .catch(function (e) { if (window.dbg) window.dbg('state GREŠKA: ' + (e && e.message || e)); /* offline */ });
 }
 
 function addAppt(a) {
@@ -136,9 +162,15 @@ function removeBreak(id) {
   _refresh();
   setInterval(function () { if (!document.hidden) _refresh(); }, POLL);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) _refresh(); });
-  try {
-    var es = new EventSource("/api/stream");
-    es.onmessage = function () { _refresh(); };
-    es.onerror = function () { es.close(); };
-  } catch (e) {}
+  // SSE tek POSLE window load: večno otvorena konekcija otvorena tokom učitavanja
+  // drži loading spinner starih TV browsera da se vrti bez kraja.
+  function startSse() {
+    try {
+      var es = new EventSource("/api/stream");
+      es.onmessage = function () { _refresh(); };
+      es.onerror = function () { es.close(); };
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') startSse();
+  else window.addEventListener('load', function () { setTimeout(startSse, 1000); });
 })();
