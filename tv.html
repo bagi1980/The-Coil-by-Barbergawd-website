@@ -868,7 +868,7 @@ preloadDemoPhotos(function(){ renderQueue(); });   // učitaj demo fotke pa pono
 // browserov spinner se vrti bez kraja. Stari TV browseri nemaju autoplay blokadu
 // pa zvuk kreće sam; moderni desktop može blokirati zvučni autoplay — tamo ostaje
 // YouTube-ov play na samom plejeru.
-function startMusic(){ setTimeout(function(){ dbg('YT muzika: start'); playYt(currentYt()); }, 4000); }
+function startMusic(){ if(/[?&]nomusic=1/.test(location.search)){ dbg('YT muzika: isključena (nomusic=1)'); return; } setTimeout(function(){ dbg('YT muzika: start'); playYt(currentYt()); }, 4000); }
 $('#yt').onload=function(){ if($('#yt').src.indexOf('youtube')!==-1) dbg('YT iframe: učitan ✓'); };
 if(document.readyState==='complete') startMusic();
 else window.addEventListener('load', startMusic);
