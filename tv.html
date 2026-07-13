@@ -500,7 +500,6 @@ if(window.DBG){
         <input id="ytInput" placeholder="npr. youtube.com/watch?v=…  ili  …?list=…">
         <div class="yt-row">
           <button class="yt-btn go" id="ytGo">▶ Pusti</button>
-          <button class="yt-btn" id="ytSearch">🔎 Pretraži na YouTube</button>
         </div>
       </div>
     </div>
@@ -581,7 +580,6 @@ $('#play').onclick=function(){ playYt(currentYt()); };
 $('#ytEdit').onclick=function(){ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
 $('#ytGo').onclick=function(){ var e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.setItem('yt_url',e); playYt(e); };
 $('#ytInput').onkeydown=function(ev){ if(ev.key==='Enter') $('#ytGo').click(); };
-$('#ytSearch').onclick=function(){ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent($('#ytInput').value.trim()||'lofi barbershop'),'_blank'); };
 
 // ── Demo klijenti (kad nema pravih termina — da TV ne bude prazna) ──
 // Fotke: naziv fajla = ime klijenta, u img/ (proba .jpg/.jpeg/.png/.webp).
