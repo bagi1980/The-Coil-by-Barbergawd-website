@@ -574,6 +574,9 @@ function ytEmbed(u){
 }
 function currentYt(){ return localStorage.getItem('yt_url')||SALON.youtube; }
 function playYt(e){ $('#yt').src=e+(e.indexOf('?')!==-1?'&':'?')+'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
+// loadYt: učitaj plejer BEZ autoplay-a — YT prikaže thumbnail + svoje play dugme,
+// stream ne krece pa TV browser ne vrti network spinner; play se klikće u samom plejeru
+function loadYt(e){ $('#yt').src=e; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
 $('#play').onclick=function(){ playYt(currentYt()); };
 $('#ytEdit').onclick=function(){ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
 $('#ytGo').onclick=function(){ var e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.setItem('yt_url',e); playYt(e); };
@@ -868,7 +871,7 @@ preloadDemoPhotos(function(){ renderQueue(); });   // učitaj demo fotke pa pono
 // browserov spinner se vrti bez kraja. Stari TV browseri nemaju autoplay blokadu
 // pa zvuk kreće sam; moderni desktop može blokirati zvučni autoplay — tamo ostaje
 // YouTube-ov play na samom plejeru.
-function startMusic(){ if(/[?&]nomusic=1/.test(location.search)){ dbg('YT muzika: isključena (nomusic=1)'); return; } setTimeout(function(){ dbg('YT muzika: start'); playYt(currentYt()); }, 4000); }
+function startMusic(){ if(/[?&]nomusic=1/.test(location.search)){ dbg('YT muzika: isključena (nomusic=1)'); return; } setTimeout(function(){ dbg('YT: kanal učitan, čeka ručni play'); loadYt(currentYt()); }, 4000); }
 $('#yt').onload=function(){ if($('#yt').src.indexOf('youtube')!==-1) dbg('YT iframe: učitan ✓'); };
 if(document.readyState==='complete') startMusic();
 else window.addEventListener('load', startMusic);
