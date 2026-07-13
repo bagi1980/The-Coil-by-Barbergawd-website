@@ -38,8 +38,10 @@
   .mark{display:flex;align-items:center;gap:18px}
   .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);overflow:hidden;
     box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
-  /* Ugao 120° → y-period = 56px / cos(60°) = 56 / 0.5 = 112px (ceo broj → bez skoka pri loopu) */
-  .pole i{position:absolute;left:-50%;top:-200%;width:200%;height:600%;
+  /* Ugao 120° → y-period = 56px / cos(60°) = 56 / 0.5 = 112px (ceo broj → bez skoka pri loopu).
+     Offset u px (2 perioda), ne u % — animacija spušta za fiksnih 112px, pa bi na malom stubiću
+     (mobilni 50px, kompaktni TV 48px) procentualni offset otkrio vrh pri kraju ciklusa. */
+  .pole i{position:absolute;left:-50%;top:-224px;width:200%;height:calc(100% + 336px);
     background:repeating-linear-gradient(120deg,var(--red) 0,var(--red) 14px,var(--cream) 14px,var(--cream) 28px,var(--blue) 28px,var(--blue) 42px,var(--cream) 42px,var(--cream) 56px);
     animation:poleSpin 4s linear infinite}
   @keyframes poleSpin{to{transform:translateY(112px)}}
@@ -199,7 +201,7 @@
   .closed-mark{display:flex;align-items:center;gap:18px;margin-bottom:40px}
   .closed-mark .pole{width:26px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.22);
     overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.45);position:relative;background:#0c0c0e}
-  .closed-mark .pole i{position:absolute;left:-50%;top:-200%;width:200%;height:600%;
+  .closed-mark .pole i{position:absolute;left:-50%;top:-224px;width:200%;height:calc(100% + 336px);
     background:repeating-linear-gradient(120deg,var(--red) 0,var(--red) 14px,var(--cream) 14px,var(--cream) 28px,var(--blue) 28px,var(--blue) 42px,var(--cream) 42px,var(--cream) 56px);
     animation:poleSpin 4s linear infinite}
   .closed-mark .wm{font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:8px;color:var(--white)}
