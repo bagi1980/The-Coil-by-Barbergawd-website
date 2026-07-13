@@ -496,7 +496,13 @@ if(window.DBG){
         <span>PUSTI MUZIKU</span>
       </div>
       <div class="yt-panel" id="ytPanel">
-        <div class="yt-h">Zalepi YouTube link (pesma ili plejlista)</div>
+        <div class="yt-h">Radio (radi na svakom TV-u)</div>
+        <div class="yt-row">
+          <button class="yt-btn" data-radio="https://ice1.somafm.com/groovesalad-128-mp3">🎧 Chill</button>
+          <button class="yt-btn" data-radio="https://ice1.somafm.com/secretagent-128-mp3">🍸 Lounge</button>
+          <button class="yt-btn" data-radio="https://ice1.somafm.com/sonicuniverse-128-mp3">🎷 Jazz</button>
+        </div>
+        <div class="yt-h">ili zalepi YouTube link (pesma ili plejlista)</div>
         <input id="ytInput" placeholder="npr. youtube.com/watch?v=…  ili  …?list=…">
         <div class="yt-row">
           <button class="yt-btn go" id="ytGo">▶ Pusti</button>
@@ -572,13 +578,32 @@ function ytEmbed(u){
   return null;
 }
 function currentYt(){ return localStorage.getItem('yt_url')||SALON.youtube; }
-function playYt(e){ $('#yt').src=e+(e.indexOf('?')!==-1?'&':'?')+'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
+function playYt(e){ stopRadio(); $('#yt').src=e+(e.indexOf('?')!==-1?'&':'?')+'autoplay=1'; $('#play').style.display='none'; $('#ytPanel').classList.remove('on'); }
 // loadYt: učitaj plejer BEZ autoplay-a — YT prikaže thumbnail + svoje play dugme,
 // stream ne krece pa TV browser ne vrti network spinner; play se klikće u samom plejeru
 function loadYt(e){ $('#yt').src=e; $('#ytPanel').classList.remove('on'); }
-$('#play').onclick=function(){ playYt(currentYt()); };
+// ── Radio stream — radi i na starim TV browserima gde YT embed ne može da svira ──
+var _radio=null;
+function stopRadio(){ if(_radio){ try{_radio.pause();}catch(e){} _radio=null; } }
+function playRadio(u){
+  stopRadio();
+  _radio=new Audio(u);
+  _radio.onerror=function(){ dbg('radio GREŠKA: '+u); };
+  _radio.play();
+  $('#yt').src='about:blank';
+  $('#play').style.display='none';
+  $('#ytPanel').classList.remove('on');
+  dbg('radio: '+u);
+}
+$('#play').onclick=function(){ var r=localStorage.getItem('radio_url'); if(r){ playRadio(r); } else { playYt(currentYt()); } };
+(function(){
+  var bs=document.querySelectorAll('[data-radio]');
+  for(var i=0;i<bs.length;i++){
+    bs[i].onclick=function(){ var u=this.getAttribute('data-radio'); localStorage.setItem('radio_url',u); playRadio(u); };
+  }
+})();
 $('#ytEdit').onclick=function(){ $('#ytInput').value=''; $('#ytPanel').classList.toggle('on'); $('#ytInput').focus(); };
-$('#ytGo').onclick=function(){ var e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.setItem('yt_url',e); playYt(e); };
+$('#ytGo').onclick=function(){ var e=ytEmbed($('#ytInput').value); if(!e){$('#ytInput').placeholder='Nevažeći link'; $('#ytInput').value=''; return;} localStorage.removeItem('radio_url'); localStorage.setItem('yt_url',e); playYt(e); };
 $('#ytInput').onkeydown=function(ev){ if(ev.key==='Enter') $('#ytGo').click(); };
 
 // ── Demo klijenti (kad nema pravih termina — da TV ne bude prazna) ──
