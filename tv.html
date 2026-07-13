@@ -52,10 +52,10 @@ if(window.DBG){
   html,body{height:100%;font-family:var(--body);color:var(--white);overflow:hidden;background:var(--bg)}
 
   /* animated barber-pole background + readability scrim */
-  #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;background:var(--bg)}
+  #bg{position:fixed;top:0;right:0;bottom:0;left:0;width:100%;height:100%;z-index:0;display:block;background:var(--bg)}
   .bg-fallback{background:
     repeating-linear-gradient(125deg,rgba(200,16,46,.22) 0,rgba(200,16,46,.22) 70px,rgba(244,239,226,.05) 70px,rgba(244,239,226,.05) 140px,rgba(22,48,107,.24) 140px,rgba(22,48,107,.24) 210px,rgba(244,239,226,.05) 210px,rgba(244,239,226,.05) 280px),var(--bg)}
-  .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+  .scrim{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1;pointer-events:none;
     background:radial-gradient(130% 100% at 50% 0%,rgba(10,10,12,.30) 0%,rgba(10,10,12,.78) 70%,rgba(8,8,10,.92) 100%)}
 
   /* Flex umesto grid-a: stari TV browseri (Chromium <57) nemaju CSS Grid pa se sve slagalo u kolonu */
@@ -115,10 +115,10 @@ if(window.DBG){
   .promo{flex:1;min-height:230px;border-radius:26px;border:1px solid var(--line2);overflow:hidden;position:relative;
     background:var(--glass2);box-shadow:0 22px 60px rgba(0,0,0,.5)}
   /* --- Promo: base (no photo) --- */
-  .np-bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .6s}
+  .np-bg{position:absolute;top:0;right:0;bottom:0;left:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .6s}
   .np-bg.on{opacity:1}
-  .np-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.08) 0%,rgba(10,10,12,0) 20%,rgba(10,10,12,.5) 55%,rgba(8,8,10,.97) 100%)}
-  .np-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.16)}
+  .np-grad{position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(180deg,rgba(10,10,12,.08) 0%,rgba(10,10,12,0) 20%,rgba(10,10,12,.5) 55%,rgba(8,8,10,.97) 100%)}
+  .np-empty{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.16)}
   .np-empty svg{width:160px;height:160px}
   .np-label{position:absolute;top:22px;left:24px;z-index:4;display:flex;align-items:center;gap:9px;
     background:var(--red);color:var(--cream);font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:3px;
@@ -141,7 +141,7 @@ if(window.DBG){
   .promo.split .np-meta{font-size:20px}
   .promo.split .np-empty{display:none!important}
   /* TV schedule slide */
-  .np-sched{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+  .np-sched{position:absolute;top:0;right:0;bottom:0;left:0;display:none;flex-direction:column;justify-content:center;
     padding:80px 30px 30px;gap:0;z-index:3;background:rgba(10,10,14,.55)}
   .np-sched-title{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:4px;
     color:var(--mut);text-transform:uppercase;margin-bottom:18px}
@@ -176,7 +176,7 @@ if(window.DBG){
     background:rgba(10,10,12,.72);font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:3px;color:var(--cream);
     padding:7px 13px;border-radius:9px;backdrop-filter:blur(10px)}
   .music .ml svg{width:15px;height:15px;color:var(--red2)}
-  .music .play{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  .music .play{position:absolute;top:0;right:0;bottom:0;left:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
     background:linear-gradient(180deg,rgba(10,10,12,.62),rgba(10,10,12,.85));color:var(--cream);cursor:pointer}
   .music .play .pi{width:54px;height:54px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(200,16,46,.4)}
   .music .play .pi svg{width:24px;height:24px;color:var(--cream);margin-left:3px}
@@ -184,7 +184,7 @@ if(window.DBG){
   .yt-edit{position:absolute;top:14px;right:14px;z-index:5;background:rgba(10,10,12,.72);border:1px solid var(--line);
     color:var(--cream);font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:.5px;padding:7px 12px;border-radius:9px;cursor:pointer;backdrop-filter:blur(10px)}
   .yt-edit:hover{border-color:var(--red2);color:var(--red2)}
-  .yt-panel{position:absolute;inset:0;z-index:6;display:none;flex-direction:column;justify-content:center;gap:11px;
+  .yt-panel{position:absolute;top:0;right:0;bottom:0;left:0;z-index:6;display:none;flex-direction:column;justify-content:center;gap:11px;
     padding:20px 22px;background:rgba(10,10,12,.94);backdrop-filter:blur(14px)}
   .yt-panel.on{display:flex}
   .yt-panel .yt-h{font-family:var(--display);font-weight:500;letter-spacing:2px;font-size:14px;color:var(--cream)}
@@ -198,7 +198,7 @@ if(window.DBG){
   .yt-btn:hover{border-color:var(--red2)}
 
   /* ── Walk-in modal ─────────────────────── */
-  .wi-wrap{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.72);display:none;
+  .wi-wrap{position:fixed;top:0;right:0;bottom:0;left:0;z-index:90;background:rgba(0,0,0,.72);display:none;
     align-items:center;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
   .wi-wrap.on{display:flex}
   .wi-modal{background:#16161c;border:1px solid var(--line2);border-radius:26px;padding:40px;
@@ -221,7 +221,7 @@ if(window.DBG){
   .wi-btn.ok:disabled{opacity:.35;cursor:not-allowed}
   .wi-btn:not(.ok):hover{border-color:var(--line2);color:var(--cream)}
   /* ── Closed overlay ─────────────────────── */
-  .closed-wrap{position:fixed;inset:0;z-index:80;background:rgba(8,8,10,.92);
+  .closed-wrap{position:fixed;top:0;right:0;bottom:0;left:0;z-index:80;background:rgba(8,8,10,.92);
     display:none;flex-direction:column;align-items:center;justify-content:center;
     backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
   .closed-wrap.on{display:flex}
@@ -256,7 +256,7 @@ if(window.DBG){
   @keyframes marq{to{transform:translateX(-50%)}}
 
   /* ── welcome overlay ───────────────────── */
-  .welcome{position:fixed;inset:0;z-index:50;
+  .welcome{position:fixed;top:0;right:0;bottom:0;left:0;z-index:50;
     background:radial-gradient(120% 90% at 50% 28%,rgba(28,20,24,.96) 0%,rgba(8,8,10,.985) 70%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     opacity:0;pointer-events:none;transition:opacity .5s;backdrop-filter:blur(8px)}
