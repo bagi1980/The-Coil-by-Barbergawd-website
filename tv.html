@@ -528,7 +528,7 @@ function tick(){
   var d=salonNow();
   var hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
   $('#clock').innerHTML=hh+'<span>:</span>'+mm;
-  try{ $('#date').textContent=d.toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
+  try{ $('#date').textContent=d.toLocaleDateString('sr-Latn-RS',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
   checkWelcome(d);
 }
 setInterval(tick,1000);
@@ -831,10 +831,14 @@ setInterval(checkClosed, 60000);
 tick(); renderQueue(); checkClosed();
 preloadDemoPhotos(function(){ renderQueue(); });   // učitaj demo fotke pa ponovo iscrtaj sa slikama
 
-// Muzika: auto-start pri učitavanju — na TV-u nema kucanja linkova, mora sama da krene.
-// Stari TV browseri nemaju autoplay blokadu pa zvuk kreće odmah; moderni desktop
-// može blokirati zvučni autoplay — tamo ostaje YouTube-ov play na samom plejeru.
-playYt(currentYt());
+// Muzika: auto-start, ali tek POSLE window load + pauza — YT embed je težak za
+// stare TV browsere: ako krene odmah, guši mrežu/CPU pa fotke i red kasne, a
+// browserov spinner se vrti bez kraja. Stari TV browseri nemaju autoplay blokadu
+// pa zvuk kreće sam; moderni desktop može blokirati zvučni autoplay — tamo ostaje
+// YouTube-ov play na samom plejeru.
+function startMusic(){ setTimeout(function(){ playYt(currentYt()); }, 4000); }
+if(document.readyState==='complete') startMusic();
+else window.addEventListener('load', startMusic);
 </script>
 </body>
 </html>
