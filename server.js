@@ -607,9 +607,11 @@ async function handler(req, res) {
   }
   fs.readFile(fp, (err, buf) => {
     if (err) { res.writeHead(404); return res.end("not found"); }
-    const cache = ext === ".html" ? "no-cache"
-      : (ext === ".css" || ext === ".js") ? "public, max-age=300"
-      : "public, max-age=86400";
+    // s-maxage: Vercel edge kešira (novi deploy prazni edge keš) — bez toga
+    // svaki bajt statike ide kroz funkciju i broji se kao Fast Origin Transfer
+    const cache = ext === ".html" ? "public, max-age=0, must-revalidate, s-maxage=86400"
+      : (ext === ".css" || ext === ".js") ? "public, max-age=300, s-maxage=86400"
+      : "public, max-age=86400, s-maxage=86400";
     res.writeHead(200, { "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": cache });
     res.end(buf);
   });

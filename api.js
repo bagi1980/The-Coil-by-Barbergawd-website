@@ -158,7 +158,7 @@ function removeBreak(id) {
 // live: polling kad je tab vidljiv (štedi Upstash zahteve), SSE bonus kad radi lokalno.
 // TV može postaviti window.POLL_MS pre učitavanja api.js za brži interval.
 (function initLive() {
-  var POLL = (typeof window !== 'undefined' && window.POLL_MS) || 5000;
+  var POLL = (typeof window !== 'undefined' && window.POLL_MS) || 15000;
   _refresh();
   setInterval(function () { if (!document.hidden) _refresh(); }, POLL);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) _refresh(); });
