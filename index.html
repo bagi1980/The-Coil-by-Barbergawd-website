@@ -58,9 +58,12 @@
       <input id="name" placeholder="Ime i prezime">
       <input id="phone" placeholder="Telefon">
     </div>
+    <div class="row" style="margin-top:10px">
+      <input id="email" type="email" placeholder="Email (opciono — za potvrdu termina)">
+    </div>
     <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;margin-top:14px;font-size:13px;color:var(--cream,#fff);cursor:pointer">
       <input type="checkbox" id="bookConsent" style="width:18px;height:18px;margin:2px 0 0;flex-shrink:0;accent-color:var(--accent,#e0533d)">
-      <span>Slažem se da se moji podaci (ime i telefon) čuvaju radi zakazivanja termina, u skladu sa <a href="privatnost.html" target="_blank" style="color:var(--accent,#e0533d);text-decoration:underline">Politikom privatnosti</a>.</span>
+      <span>Slažem se da se moji podaci (ime, telefon i email ako ga ostavim) čuvaju radi zakazivanja termina, u skladu sa <a href="privatnost.html" target="_blank" style="color:var(--accent,#e0533d);text-decoration:underline">Politikom privatnosti</a>.</span>
     </label>
     <button class="btn" id="submit" disabled style="margin-top:12px">ZAKAŽI TERMIN</button>
     <div id="result"></div>
@@ -329,15 +332,16 @@ $('#name').oninput=check; $('#phone').oninput=check; $('#bookConsent').onchange=
 $('#submit').onclick = async ()=>{
   $('#submit').disabled=true;
   const a = await addAppt({ date:sel.day, time:sel.time, barberId:sel.barber, serviceId:sel.service,
-    name:$('#name').value.trim(), phone:$('#phone').value.trim() });
+    name:$('#name').value.trim(), phone:$('#phone').value.trim(), email:$('#email').value.trim() });
   if(!a || a.error){
     $('#result').innerHTML = `<div class="ok" style="border-color:rgba(220,90,90,.5)"><b>NIJE ZAKAZANO</b><br>${esc((a&&a.error)||'Greška — pokušaj ponovo.')}</div>`;
     check(); refreshSlots(); return;
   }
   const b=barberById(sel.barber).name, s=serviceById(sel.service);
   $('#result').innerHTML = `<div class="ok"><b>TERMIN ZAKAZAN</b><br>${esc(a.name)}, ${esc(s.name)} kod ${esc(b)}<br>
-    ${sel.day===todayStr()?'Danas':new Date(sel.day+'T12:00').toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'numeric'})} u ${esc(a.time)}. Vidimo se!</div>`;
-  sel.time=null; refreshSlots();
+    ${sel.day===todayStr()?'Danas':new Date(sel.day+'T12:00').toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'numeric'})} u ${esc(a.time)}. Vidimo se!
+    ${a.email?`<br><span style="opacity:.8;font-size:13px">Potvrda je poslata na ${esc(a.email)}.</span>`:''}</div>`;
+  sel.time=null; $('#email').value=''; refreshSlots();
 };
 
 // ADMIN

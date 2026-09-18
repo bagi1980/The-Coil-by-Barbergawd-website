@@ -9,9 +9,12 @@ create table if not exists appointments (
   service_id  text,
   name        text not null,
   phone       text not null,
+  email       text,
   greeted     boolean default false,
   created_at  bigint
 );
+-- Migracija za postojeće baze (dodato uz mejl potvrde termina):
+alter table appointments add column if not exists email text;
 
 create table if not exists breaks (
   id          text primary key,

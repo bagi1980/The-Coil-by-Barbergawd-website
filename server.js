@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const vm = require("vm");
 
 const ROOT = __dirname;
 const DB = process.env.VERCEL ? "/tmp/data.json" : path.join(ROOT, "data.json");
@@ -76,6 +77,60 @@ async function sendMail(to, subject, html) {
     return { ok: true };
   } catch (e) { return { error: e.message }; }
 }
+
+// config.js je ES5 skript za browser (nema module.exports) — učitavamo ga u vm sandbox
+// da bi mejl potvrde koristio ISTI izvor istine kao TV i sajt (svaki klijent ga menja).
+let _cfgCache = null;
+function salonCfg() {
+  if (_cfgCache) return _cfgCache;
+  const fallback = { SALON: { name: "Barbershop" }, SERVICES: [], BARBERS: [] };
+  try {
+    const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8");
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(src, sandbox, { timeout: 1000 });
+    _cfgCache = { SALON: sandbox.SALON || fallback.SALON, SERVICES: sandbox.SERVICES || [], BARBERS: sandbox.BARBERS || [] };
+  } catch (e) {
+    console.error("config.js load error:", e.message);
+    _cfgCache = fallback;
+  }
+  return _cfgCache;
+}
+function escHtml(s) {
+  const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => map[c]);
+}
+const DANI = ["nedelja", "ponedeljak", "utorak", "sreda", "četvrtak", "petak", "subota"];
+function humanDate(iso) {
+  const d = new Date(iso + "T12:00");
+  if (isNaN(d)) return iso;
+  return `${DANI[d.getDay()]}, ${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}.`;
+}
+
+// Potvrda termina klijentu — šalje se samo ako je ostavio email (polje je opciono).
+// Nikad ne obara zakazivanje: greška se loguje, termin ostaje sačuvan.
+async function sendApptConfirmation(a) {
+  if (!a.email) return;
+  const cfg = salonCfg();
+  const salon = cfg.SALON.name || "Barbershop";
+  const svc = (cfg.SERVICES.find(s => s.id === a.serviceId) || {}).name || "Termin";
+  const barber = (cfg.BARBERS.find(b => b.id === a.barberId) || {}).name || "";
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
+    <h2 style="margin:0 0 4px;font-size:20px">Termin je potvrđen ✂️</h2>
+    <p style="margin:0 0 20px;color:#666;font-size:14px">${escHtml(salon)}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:15px">
+      <tr><td style="padding:8px 0;color:#666">Kada</td><td style="padding:8px 0;text-align:right"><b>${escHtml(humanDate(a.date))} u ${escHtml(a.time)}</b></td></tr>
+      <tr><td style="padding:8px 0;color:#666">Usluga</td><td style="padding:8px 0;text-align:right">${escHtml(svc)}</td></tr>
+      ${barber ? `<tr><td style="padding:8px 0;color:#666">Frizer</td><td style="padding:8px 0;text-align:right">${escHtml(barber)}</td></tr>` : ""}
+      <tr><td style="padding:8px 0;color:#666">Na ime</td><td style="padding:8px 0;text-align:right">${escHtml(a.name)}</td></tr>
+    </table>
+    <p style="margin:24px 0 0;font-size:13px;color:#666;line-height:1.5">
+      Ako ne možeš da dođeš, javi nam na vreme da termin oslobodimo za nekog drugog.
+    </p>
+  </div>`;
+  const r = await sendMail(a.email, `Termin potvrđen — ${humanDate(a.date)} u ${a.time}`, html);
+  if (r.error) console.error("Confirmation mail error:", r.error);
+}
 async function verifyPass(pass) {
   const stored = await storedPassHash();
   if (stored) return checkPass(pass, stored);
@@ -92,6 +147,7 @@ function validateAppt(a) {
   if (!a.name) return "Ime je obavezno.";
   if (!a.phone) return "Telefon je obavezan.";
   if (a.phone !== "walk-in" && !/^[\d+\-/() .]{3,30}$/.test(a.phone)) return "Neispravan broj telefona."; // "walk-in" šalje TV
+  if (a.email && !/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(a.email)) return "Neispravan email."; // opciono polje
   if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date || "")) return "Neispravan datum.";
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(a.time || "")) return "Neispravno vreme.";
   if (!/^b\d{1,3}$/.test(a.barberId || "")) return "Neispravan frizer.";
@@ -128,11 +184,11 @@ const CUTOFF_DATE = () => {
 // --- Supabase helpers: konverzija snake_case ↔ camelCase ---
 function apptFromRow(r) {
   return { id: r.id, date: r.date, time: r.time, barberId: r.barber_id, serviceId: r.service_id,
-    name: r.name, phone: r.phone, greeted: r.greeted, createdAt: r.created_at };
+    name: r.name, phone: r.phone, email: r.email || "", greeted: r.greeted, createdAt: r.created_at };
 }
 function apptToRow(a) {
   return { id: a.id, date: a.date, time: a.time, barber_id: a.barberId, service_id: a.serviceId || null,
-    name: a.name, phone: a.phone, greeted: a.greeted || false, created_at: a.createdAt };
+    name: a.name, phone: a.phone, email: a.email || null, greeted: a.greeted || false, created_at: a.createdAt };
 }
 function breakFromRow(r) {
   return { id: r.id, barberId: r.barber_id, date: r.date, startTime: r.start_time, endTime: r.end_time };
@@ -176,7 +232,7 @@ function publicState(d, admin) {
     appointments: (d.appointments || []).map(a => {
       const out = { id: a.id, date: a.date, time: a.time, barberId: a.barberId, serviceId: a.serviceId,
         name: a.name, greeted: a.greeted, photoKey: pkey(clientKey(a.name, a.phone)) };
-      if (admin) out.phone = a.phone;
+      if (admin) { out.phone = a.phone; out.email = a.email || ""; }
       return out;
     }),
     breaks: d.breaks || [],
@@ -446,7 +502,8 @@ async function handler(req, res) {
     const raw = await body(req);
     // samo poznata polja — ništa drugo ne ulazi u bazu
     const a = { date: raw.date, time: raw.time, barberId: raw.barberId, serviceId: raw.serviceId || null,
-      name: cleanStr(raw.name, 60), phone: cleanStr(raw.phone, 30) };
+      name: cleanStr(raw.name, 60), phone: cleanStr(raw.phone, 30),
+      email: cleanStr(raw.email, 120).toLowerCase() };
     const err = validateAppt(a);
     if (err) return json(res, 400, { error: err });
     if (new Date(a.date + "T12:00").getDay() === 0)
@@ -459,6 +516,7 @@ async function handler(req, res) {
       try {
         const saved = await sbAddAppt(a);
         broadcast();
+        await sendApptConfirmation(a).catch(e => console.error("Confirmation mail:", e.message));
         return json(res, 200, saved);
       } catch(e) {
         console.error("Supabase error:", e.message, e);
@@ -466,6 +524,7 @@ async function handler(req, res) {
       }
     }
     const d = fileLoad(); d.appointments.push(a); fileSave(d); broadcast();
+    await sendApptConfirmation(a).catch(e => console.error("Confirmation mail:", e.message));
     return json(res, 200, a);
   }
 
