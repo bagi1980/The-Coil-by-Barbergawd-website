@@ -356,6 +356,25 @@ function json(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// ── /api/state: uslovni GET (ETag → 304) ──
+// Heš se računa SAMO iz podataka: now/tzOffsetMin se menjaju u svakom odgovoru pa bi
+// ETag nad celim telom bio beskorisan (nikad se ne bi poklopio). Nepromenjeno stanje
+// vraća 304 bez tela — poll svakih 15s prestaje da prenosi ceo state uzalud.
+function stateEtag(s, admin) {
+  const data = JSON.stringify({ a: s.appointments, b: s.breaks, p: s.photoVers, admin: !!admin });
+  return '"' + crypto.createHash("sha1").update(data).digest("hex").slice(0, 27) + '"';
+}
+function stateJson(req, res, s, admin) {
+  const etag = stateEtag(s, admin);
+  // no-store: HTTP keš browsera i Vercel edge-a se ne mešaju — uslovni GET vodi api.js sam.
+  // Admin odgovor sadrži telefone i mejlove, javni ne; nijedan ne sme u deljeni keš.
+  const h = { "ETag": etag, "Cache-Control": "no-store" };
+  if (req.headers["if-none-match"] === etag) { res.writeHead(304, h); return res.end(); }
+  h["Content-Type"] = "application/json";
+  res.writeHead(200, h);
+  res.end(JSON.stringify(s));
+}
+
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
   ".svg": "image/svg+xml", ".ico": "image/x-icon" };
@@ -489,12 +508,12 @@ async function handler(req, res) {
     const admin = await isAdmin(req);
     if (supabase) {
       const d = await sbLoad();
-      return json(res, 200, publicState(d, admin));
+      return stateJson(req, res, publicState(d, admin), admin);
     }
     const d = fileLoad();
     const pv = {}; // fajl-storage drži sirove ključeve (ime|telefon) — hashuj pre slanja
     for (const k of Object.keys(d.photoVers || {})) pv[pkey(k)] = d.photoVers[k];
-    return json(res, 200, publicState({ ...d, photoVers: pv }, admin));
+    return stateJson(req, res, publicState({ ...d, photoVers: pv }, admin), admin);
   }
 
   // ── /api/appointments POST ──

@@ -15,6 +15,8 @@ if (typeof window !== 'undefined' && !window.fetch) {
         resolve({
           ok: x.status >= 200 && x.status < 300,
           status: x.status,
+          // minimalni headers.get — /api/state čita ETag za uslovni GET
+          headers: { get: function (n) { try { return x.getResponseHeader(n); } catch (e) { return null; } } },
           json: function () { try { return Promise.resolve(JSON.parse(x.responseText)); } catch (e) { return Promise.reject(e); } },
           text: function () { return Promise.resolve(x.responseText); }
         });
@@ -31,6 +33,8 @@ var _subs = [];
 var _vers = {};
 var _lastHash = '';
 var _loaded = false;   // true nakon prvog uspešnog /api/state — sprečava blic praznog stanja
+var _etag = null;      // ETag poslednjeg /api/state — uslovni GET štedi transfer (304 bez tela)
+var _polls = 0;
 
 function toMins(t) {
   var p = (t || '0:0').split(':');
@@ -57,14 +61,25 @@ function getPhoto(a) { return (a && _state.photos[a.photoKey]) || null; }
 function onData(cb) { _subs.push(cb); }
 function isLoaded() { return _loaded; }
 // forsiraj pun refresh (posle admin logina — da stignu telefoni u keš)
-function forceRefresh() { _lastHash = ''; return _refresh(); }
+function forceRefresh() { _lastHash = ''; _etag = null; return _refresh(); }
 function _emit() { _subs.forEach(function (cb) { try { cb(); } catch (e) {} }); }
 
 function _refresh() {
   // admin šalje lozinku da bi dobio i telefone; javne stranice dobijaju podatke bez telefona
-  return fetch("/api/state", { headers: adminHeaders() })
-    .then(function (r) { return r.json(); })
+  var hdrs = adminHeaders();
+  // Uslovni GET: ako se stanje nije promenilo server vraća 304 bez tela. Svaki 20. poll
+  // (≈5 min) traži pun odgovor — osiguranje ako neki stari TV browser loše obradi 304,
+  // da ne ostane zauvek na starom prikazu.
+  if (_etag && (_polls++ % 20 !== 0)) hdrs['If-None-Match'] = _etag;
+  return fetch("/api/state", { headers: hdrs })
+    .then(function (r) {
+      if (r.status === 304) { _loaded = true; return null; }
+      var et = (r.headers && r.headers.get) ? r.headers.get('ETag') : null;
+      if (et) _etag = et;
+      return r.json();
+    })
     .then(function (s) {
+      if (!s) return;   // 304 — stanje je nepromenjeno, nema šta da se re-renderuje
       _loaded = true;
       if (typeof s.now === 'number') {
         _clockSkewMs = s.now - Date.now();
